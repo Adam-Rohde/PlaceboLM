@@ -7,7 +7,7 @@
 ripp(type = c("placebo outcome", "placebo treatment", "double placebo"), ...)
 }
 \arguments{
-\item{type}{"outcome", "treatment", or "double"}
+\item{type}{"placebo outcome", "placebo treatment", or "double placebo"}
 
 \item{...}{arguments passed to other methods. First argument should be a \code{\link{lm}} with the
 outcome regression (argument \code{lm.y.dpx} of the form \code{lm(Y~D+P+X)}). Second argument

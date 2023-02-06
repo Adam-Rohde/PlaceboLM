@@ -7,12 +7,12 @@
 ripp.p.treatment(lm.y.dpx, treatment, placebo_treatment)
 }
 \arguments{
-\item{lm.y.dpx}{\code{lm(Y~D+P+X)} object. \code{Y} is actual outcome.}
+\item{lm.y.dpx}{\code{lm(Y~D+P+X)} object.}
 
 \item{treatment}{The name of the actual treatment.}
 
-\item{placebo_treatment}{\code{P} is placebo treatment.}
+\item{placebo_treatment}{The name of the placebo treatment.}
 }
 \description{
-Partial identification with imperfect placebo treatment
+\code{Y} is the actual outcome. \code{D} is the treatment. \code{P} is the placebo treatment.
 }
