@@ -1,4 +1,5 @@
 url: https://adam-rohde.github.io/ripp/
 template:
-  bootstrap: 5
+  params:
+    bootswatch: cosmo
 
