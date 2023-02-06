@@ -1,10 +1,10 @@
 Package: ripp
-Title: What the Package Does (One Line, Title Case)
+Title: Causal Progress with Imperfect Placebos in R
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
+    person("Adam", "Rohde", , "adamrohde@ucla.edu", role = c("aut", "cre"),
            comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
+Description: Initial R package for making causal progress with imperfect placebos.
 License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
     license
 Encoding: UTF-8
