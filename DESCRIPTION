@@ -1,6 +1,6 @@
 Package: ripp
-Title: R ImPerfect Placebos - Causal Progress with Imperfect Placebos in R
-Version: 0.0.1
+Title: ripp: R ImPerfect Placebos - Causal Progress with Imperfect Placebos in R
+Version: 0.0.0.9000
 Authors@R: 
     person("Adam", "Rohde", , "adamrohde@ucla.edu", role = c("aut", "cre"),
            comment = c(ORCID = "YOUR-ORCID-ID"))
@@ -12,6 +12,5 @@ RoxygenNote: 7.2.3.9000
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
-URL: https://github.com/Adam-Rohde/ripp,
-    https://adam-rohde.github.io/ripp/
+URL: https://github.com/Adam-Rohde/ripp
 BugReports: https://github.com/Adam-Rohde/ripp/issues
