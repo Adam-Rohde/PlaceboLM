@@ -1,5 +1,5 @@
 
-# ripp
+# ripp: R ImPerfect Placebos
 
 <!-- badges: start -->
 <!-- badges: end -->
