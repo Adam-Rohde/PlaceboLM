@@ -24,8 +24,10 @@ ripp = function(type = c("placebo outcome","placebo treatment","double placebo")
 }
 
 #' Partial identification with imperfect placebo outcome
-#' @param lm.y.dpx \code{lm(Y~D+P+X)} object. \code{Y} is actual outcome.
-#' @param lm.n.dpx \code{lm(N~D+P+X)} object. \code{N} is placebo outcome.
+#' @description
+#' \code{Y} is the actual outcome. \code{N} is the placebo outcome. \code{D} is the treatment.
+#' @param lm.y.dpx \code{lm(Y~D+P+X)} object.
+#' @param lm.n.dpx \code{lm(N~D+P+X)} object.
 #' @param treatment The name of the actual treatment.
 #' @export
 ripp.p.outcome = function(lm.y.dpx,
@@ -54,9 +56,11 @@ ripp.p.outcome = function(lm.y.dpx,
 }
 
 #' Partial identification with imperfect placebo treatment
-#' @param lm.y.dpx \code{lm(Y~D+P+X)} object. \code{Y} is actual outcome.
+#' @description
+#' \code{Y} is the actual outcome. \code{D} is the treatment. \code{P} is the placebo treatment.
+#' @param lm.y.dpx \code{lm(Y~D+P+X)} object.
 #' @param treatment The name of the actual treatment.
-#' @param placebo_treatment \code{P} is placebo treatment.
+#' @param placebo_treatment The name of the placebo treatment.
 #' @export
 ripp.p.treatment = function(lm.y.dpx,
                           treatment,
@@ -84,10 +88,12 @@ ripp.p.treatment = function(lm.y.dpx,
 
 
 #' Partial identification with imperfect placebo outcome and placebo treatment
-#' @param lm.y.dpx \code{lm(Y~D+P+X)} object. \code{Y} is actual outcome.
-#' @param lm.n.dpx \code{lm(N~D+P+X)} object. \code{N} is placebo outcome.
+#' @description
+#' \code{Y} is the actual outcome. \code{N} is the placebo outcome. \code{D} is the treatment. \code{P} is the placebo treatment.
+#' @param lm.y.dpx \code{lm(Y~D+P+X)} object.
+#' @param lm.n.dpx \code{lm(N~D+P+X)} object.
 #' @param treatment The name of the actual treatment.
-#' @param placebo_treatment \code{P} is placebo treatment.
+#' @param placebo_treatment The name of the placebo treatment.
 #' @export
 ripp.double.p = function(lm.y.dpx,
                         lm.n.dpx,
