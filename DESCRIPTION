@@ -1,6 +1,6 @@
 Package: ripp
-Title: ripp: R ImPerfect Placebos - Causal Progress with Imperfect Placebos in R
-Version: 0.0.0.9000
+Title: R ImPerfect Placebos - Causal Progress with Imperfect Placebos in R
+Version: 0.0.1
 Authors@R: 
     person("Adam", "Rohde", , "adamrohde@ucla.edu", role = c("aut", "cre"),
            comment = c(ORCID = "YOUR-ORCID-ID"))
