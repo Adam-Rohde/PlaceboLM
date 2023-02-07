@@ -9,7 +9,6 @@ bias <- function(type = c("placebo outcome","placebo treatment","double placebo"
   switcher(...)
 }
 
-
 #' @export
 bias.p.outcome <- function(ripped,
                           gamma,
@@ -37,7 +36,6 @@ bias.p.treatment <- function(ripped,
   bias = gamma*sqrt(lambda)*(beta.yp.dx - beta.yp.dxz)*(se.yd.px/se.yp.dx)*sqrt(df.yd.px/df.yp.dx)
   return(bias)
 }
-
 
 #' @export
 bias.double.p <- function(ripped,

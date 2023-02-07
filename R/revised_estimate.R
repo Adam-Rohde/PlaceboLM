@@ -9,7 +9,6 @@ revised_estimate <- function(type = c("placebo outcome","placebo treatment","dou
   switcher(type,...)
 }
 
-
 #' @export
 revised_estimate.p.outcome <- function(type,ripped,
                            gamma,
@@ -29,7 +28,6 @@ revised_estimate.p.treatment <- function(type,ripped,
   revised_estimate = beta.yd.px - bias(type,ripped,gamma,lambda,beta.yp.dxz)
   return(revised_estimate)
 }
-
 
 #' @export
 revised_estimate.double.p <- function(type,ripped,
