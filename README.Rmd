@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 <!-- badges: start -->
 <!-- badges: end -->
 
-Initial R package for making causal progress with imperfect placebos.
+Initial R package for making causal progress with imperfect placebos. See Rohde and Hazlett (20XX) for details.
 
 ## Installation
 
@@ -30,7 +30,7 @@ devtools::install_github("Adam-Rohde/ripp")
 
 ## Example
 
-Here is a simple simulated example of how to use a placebo outcome $N$ to inform partial identification of the effect of $D$ on $Y$. We start by simulating some data. $Z$ is an unobserved confounder. Then we fit `lm(Y ~ D)` and `lm(N ~ D)`. Next, we call the `ripp` function, followed by `ripp_summary`, `ripp_contour_plot`, and `ripp_line_plot`.
+Here is a simple simulated example of how to use a placebo outcome `N` to inform partial identification of the effect of `D` on `Y`. We start by simulating some data. `Z` is an unobserved confounder. Then we fit `lm(Y ~ D)` and `lm(N ~ D)`. Next, we call the `ripp` function, followed by `ripp_summary`, `ripp_contour_plot`, and `ripp_line_plot`. We call `ripp_line_plot` under the assumption that `beta.nd.pxz=0` as well as under the assumption that `beta.nd.pxz=2`, which is the true value in the simulation. 
 
 ```{r example}
 library(ripp)

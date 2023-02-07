@@ -5,6 +5,7 @@
 <!-- badges: end -->
 
 Initial R package for making causal progress with imperfect placebos.
+See Rohde and Hazlett (20XX) for details.
 
 ## Installation
 
@@ -18,11 +19,14 @@ devtools::install_github("Adam-Rohde/ripp")
 
 ## Example
 
-Here is a simple simulated example of how to use a placebo outcome $N$
-to inform partial identification of the effect of $D$ on $Y$. We start
-by simulating some data. $Z$ is an unobserved confounder. Then we fit
+Here is a simple simulated example of how to use a placebo outcome `N`
+to inform partial identification of the effect of `D` on `Y`. We start
+by simulating some data. `Z` is an unobserved confounder. Then we fit
 `lm(Y ~ D)` and `lm(N ~ D)`. Next, we call the `ripp` function, followed
-by `ripp_summary`, `ripp_contour_plot`, and `ripp_line_plot`.
+by `ripp_summary`, `ripp_contour_plot`, and `ripp_line_plot`. We call
+`ripp_line_plot` under the assumption that `beta.nd.pxz=0` as well as
+under the assumption that `beta.nd.pxz=2`, which is the true value in
+the simulation.
 
 ``` r
 library(ripp)
@@ -43,7 +47,7 @@ ripp_summary(ripper)
 
 |             |  SOO | Perfect Placebo DID | Perfect Placebo DID lambda=1 | RV lambda, q=1 | RV beta, q=1 |
 |:------------|-----:|--------------------:|-----------------------------:|---------------:|-------------:|
-| beta.yd.pxz | 1.52 |              -1.492 |                       -0.569 |          0.529 |         0.82 |
+| beta.yd.pxz | 1.49 |              -1.479 |                       -0.606 |          0.505 |        0.859 |
 
 ``` r
 ripp_contour_plot(ripper)
