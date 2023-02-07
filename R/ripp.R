@@ -61,6 +61,8 @@ ripp.p.outcome <- function(lm.y.dpx,
                         se.nd.px = coefs.n.dpx[treatment,"Std. Error"],
                         df.nd.px = lm.n.dpx$df.residual)
 
+  collect$partialID_stats <- list(scale_factor = (collect$stats$se.yd.px/collect$stats$se.nd.px)*sqrt(collect$stats$df.yd.px/collect$stats$df.nd.px))
+
   class(collect) <- "ripp"
 
   return(collect)
@@ -90,6 +92,8 @@ ripp.p.treatment <- function(lm.y.dpx,
                         beta.yp.dx = coefs.y.dpx[placebo_treatment,"Estimate"],
                         se.yp.dx = coefs.y.dpx[placebo_treatment,"Std. Error"],
                         df.yp.dx = lm.y.dpx$df.residual)
+
+  collect$partialID_stats <- list(scale_factor = (collect$stats$se.yd.px/collect$stats$se.yp.dx)*sqrt(collect$stats$df.yd.px/collect$stats$df.yp.dx))
 
   class(collect) <- "ripp"
 
