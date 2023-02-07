@@ -19,13 +19,13 @@ test_that("simple_point_estimates gives correct values", {
   beta.nd.pxz = m_N_DPXZ$coefficients[["D"]]
   beta.np.dxz = m_N_DPXZ$coefficients[["P"]]
 
-  ripped_po = ripp(type="placebo outcome",lm.y.dpx = m_Y_DPX,lm.n.dpx = m_N_DPX,treatment = "D")
-  ripped_pt = ripp(type="placebo treatment",lm.y.dpx = m_Y_DPX,treatment = "D",placebo_treatment = "P")
-  ripped_dp = ripp(type="double placebo",lm.y.dpx = m_Y_DPX,lm.n.dpx = m_N_DPX,treatment = "D",placebo_treatment = "P")
+  ripper_po = ripp(type="placebo outcome",lm.y.dpx = m_Y_DPX,lm.n.dpx = m_N_DPX,treatment = "D")
+  ripper_pt = ripp(type="placebo treatment",lm.y.dpx = m_Y_DPX,treatment = "D",placebo_treatment = "P")
+  ripper_dp = ripp(type="double placebo",lm.y.dpx = m_Y_DPX,lm.n.dpx = m_N_DPX,treatment = "D",placebo_treatment = "P")
 
-  spe_po = simple_point_estimates(type="placebo outcome",ripped = ripped_po)
-  spe_pt = simple_point_estimates(type="placebo treatment",ripped = ripped_pt)
-  spe_dp = simple_point_estimates(type="double placebo",ripped = ripped_dp)
+  spe_po = simple_point_estimates(ripper = ripper_po)
+  spe_pt = simple_point_estimates(ripper = ripper_pt)
+  spe_dp = simple_point_estimates(ripper = ripper_dp)
 
 
   expect_equal(round(spe_po$SOO,4), 1.3369)

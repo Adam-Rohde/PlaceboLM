@@ -32,7 +32,7 @@ ripp <- function(type = c("placebo outcome","placebo treatment","double placebo"
                      "placebo outcome" = ripp.p.outcome,
                      "placebo treatment" = ripp.p.treatment,
                      "double placebo" = ripp.double.p)
-  switcher(...)
+  switcher(type,...)
 }
 
 #' Partial identification with imperfect placebo outcome
@@ -41,12 +41,14 @@ ripp <- function(type = c("placebo outcome","placebo treatment","double placebo"
 #' @param treatment The name of the actual treatment.
 #' @rdname ripp
 #' @export
-ripp.p.outcome <- function(lm.y.dpx,
-                        lm.n.dpx,
-                        treatment){
+ripp.p.outcome <- function(type,
+                           lm.y.dpx,
+                           lm.n.dpx,
+                           treatment){
   collect <- list()
 
-  collect$info <- list(formula.y.dpx = stats::formula(lm.y.dpx),
+  collect$info <- list(type = type,
+                       formula.y.dpx = stats::formula(lm.y.dpx),
                        formula.n.dpx = stats::formula(lm.n.dpx),
                        treatment = treatment)
 
@@ -59,9 +61,8 @@ ripp.p.outcome <- function(lm.y.dpx,
                         df.yd.px = lm.y.dpx$df.residual,
                         beta.nd.px = coefs.n.dpx[treatment,"Estimate"],
                         se.nd.px = coefs.n.dpx[treatment,"Std. Error"],
-                        df.nd.px = lm.n.dpx$df.residual)
-
-  collect$partialID_stats <- list(scale_factor = (collect$stats$se.yd.px/collect$stats$se.nd.px)*sqrt(collect$stats$df.yd.px/collect$stats$df.nd.px))
+                        df.nd.px = lm.n.dpx$df.residual,
+                        scale_factor = (collect$stats$se.yd.px/collect$stats$se.nd.px)*sqrt(collect$stats$df.yd.px/collect$stats$df.nd.px))
 
   class(collect) <- "ripp"
 
@@ -74,12 +75,14 @@ ripp.p.outcome <- function(lm.y.dpx,
 #' @param placebo_treatment The name of the placebo treatment.
 #' @rdname ripp
 #' @export
-ripp.p.treatment <- function(lm.y.dpx,
-                          treatment,
-                          placebo_treatment){
+ripp.p.treatment <- function(type,
+                             lm.y.dpx,
+                             treatment,
+                             placebo_treatment){
   collect <- list()
 
-  collect$info <- list(formula.y.dpx = stats::formula(lm.y.dpx),
+  collect$info <- list(type = type,
+                       formula.y.dpx = stats::formula(lm.y.dpx),
                        treatment = treatment,
                        placebo_treatment = placebo_treatment)
 
@@ -91,9 +94,8 @@ ripp.p.treatment <- function(lm.y.dpx,
                         df.yd.px = lm.y.dpx$df.residual,
                         beta.yp.dx = coefs.y.dpx[placebo_treatment,"Estimate"],
                         se.yp.dx = coefs.y.dpx[placebo_treatment,"Std. Error"],
-                        df.yp.dx = lm.y.dpx$df.residual)
-
-  collect$partialID_stats <- list(scale_factor = (collect$stats$se.yd.px/collect$stats$se.yp.dx)*sqrt(collect$stats$df.yd.px/collect$stats$df.yp.dx))
+                        df.yp.dx = lm.y.dpx$df.residual,
+                        scale_factor = (collect$stats$se.yd.px/collect$stats$se.yp.dx)*sqrt(collect$stats$df.yd.px/collect$stats$df.yp.dx))
 
   class(collect) <- "ripp"
 
@@ -108,13 +110,15 @@ ripp.p.treatment <- function(lm.y.dpx,
 #' @param placebo_treatment The name of the placebo treatment.
 #' @rdname ripp
 #' @export
-ripp.double.p <- function(lm.y.dpx,
-                        lm.n.dpx,
-                        treatment,
-                        placebo_treatment){
+ripp.double.p <- function(type,
+                          lm.y.dpx,
+                          lm.n.dpx,
+                          treatment,
+                          placebo_treatment){
   collect <- list()
 
-  collect$info <- list(formula.y.dpx = stats::formula(lm.y.dpx),
+  collect$info <- list(type = type,
+                       formula.y.dpx = stats::formula(lm.y.dpx),
                        formula.n.dpx = stats::formula(lm.n.dpx),
                        treatment = treatment,
                        placebo_treatment = placebo_treatment)

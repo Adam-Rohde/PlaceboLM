@@ -9,11 +9,11 @@
 \usage{
 ripp(type = c("placebo outcome", "placebo treatment", "double placebo"), ...)
 
-ripp.p.outcome(lm.y.dpx, lm.n.dpx, treatment)
+ripp.p.outcome(type, lm.y.dpx, lm.n.dpx, treatment)
 
-ripp.p.treatment(lm.y.dpx, treatment, placebo_treatment)
+ripp.p.treatment(type, lm.y.dpx, treatment, placebo_treatment)
 
-ripp.double.p(lm.y.dpx, lm.n.dpx, treatment, placebo_treatment)
+ripp.double.p(type, lm.y.dpx, lm.n.dpx, treatment, placebo_treatment)
 }
 \arguments{
 \item{type}{"placebo outcome", "placebo treatment", or "double placebo"}
