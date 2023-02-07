@@ -15,7 +15,7 @@ bias.p.outcome <- function(ripped,
                           lambda,
                           beta.nd.pxz) {
   beta.nd.px = ripped$stats$beta.nd.px
-  scale_factor = collect$partialID_stats$scale_factor
+  scale_factor = ripped$partialID_stats$scale_factor
   bias = gamma*sqrt(lambda)*(beta.nd.px - beta.nd.pxz)*scale_factor
   return(bias)
 }
@@ -26,7 +26,7 @@ bias.p.treatment <- function(ripped,
                            lambda,
                            beta.yp.dxz) {
   beta.yp.dx = ripped$stats$beta.yp.dx
-  scale_factor = collect$partialID_stats$scale_factor
+  scale_factor = ripped$partialID_stats$scale_factor
   bias = gamma*sqrt(lambda)*(beta.yp.dx - beta.yp.dxz)*scale_factor
   return(bias)
 }
