@@ -1,4 +1,3 @@
-#' External facing bias function
 #' @export
 bias <- function(ripper,
                  ...){

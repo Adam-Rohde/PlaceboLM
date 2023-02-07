@@ -58,9 +58,11 @@ ripp.p.outcome <- function(type,
   collect$stats <- list(beta.yd.px = coefs.y.dpx[treatment,"Estimate"],
                         se.yd.px = coefs.y.dpx[treatment,"Std. Error"],
                         df.yd.px = lm.y.dpx$df.residual,
+
                         beta.nd.px = coefs.n.dpx[treatment,"Estimate"],
                         se.nd.px = coefs.n.dpx[treatment,"Std. Error"],
                         df.nd.px = lm.n.dpx$df.residual,
+
                         scale_factor = (coefs.y.dpx[treatment,"Std. Error"]/coefs.n.dpx[treatment,"Std. Error"])*sqrt(lm.y.dpx$df.residual/lm.n.dpx$df.residual))
 
   collect$simple_point_estimates <- simple_point_estimates.p.outcome(ripper_stats = collect$stats)
@@ -92,9 +94,11 @@ ripp.p.treatment <- function(type,
   collect$stats <- list(beta.yd.px = coefs.y.dpx[treatment,"Estimate"],
                         se.yd.px = coefs.y.dpx[treatment,"Std. Error"],
                         df.yd.px = lm.y.dpx$df.residual,
+
                         beta.yp.dx = coefs.y.dpx[placebo_treatment,"Estimate"],
                         se.yp.dx = coefs.y.dpx[placebo_treatment,"Std. Error"],
                         df.yp.dx = lm.y.dpx$df.residual,
+
                         scale_factor = (coefs.y.dpx[treatment,"Std. Error"]/coefs.y.dpx[placebo_treatment,"Std. Error"])*sqrt(lm.y.dpx$df.residual/lm.y.dpx$df.residual))
 
   collect$simple_point_estimates <- simple_point_estimates.p.treatment(ripper_stats = collect$stats)
