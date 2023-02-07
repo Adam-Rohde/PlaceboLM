@@ -6,7 +6,7 @@ revised_estimate <- function(type = c("placebo outcome","placebo treatment","dou
                      "placebo outcome" = revised_estimate.p.outcome,
                      "placebo treatment" = revised_estimate.p.treatment,
                      "double placebo" = revised_estimate.double.p)
-  switcher(...)
+  switcher(type,...)
 }
 
 
