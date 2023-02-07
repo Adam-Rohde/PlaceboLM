@@ -3,15 +3,16 @@
 #' @description
 #' This function performs partial identification (or sensitivity analysis) of causal
 #' effects leveraging information about imperfect placebo outcomes and/or treatments.
-#' \code{Y} is the actual outcome. \code{N} is the placebo outcome. \code{D} is the treatment. \code{P} is the placebo treatment.
+#' \code{Y} is the actual outcome.
+#' \code{N} is the placebo outcome.
+#' \code{D} is the treatment.
+#' \code{P} is the placebo treatment.
+#' \code{X} contains observed covariates.
 #' Users need to supply a \code{\link{lm}} object of the form \code{lm(Y~D+P+X)}.
 #' When a placebo outcome is available, users need to supply a \code{\link{lm}} object of the form \code{lm(N~D+P+X)}.
 #' \code{P} is a placebo treatment that is included in the regression for \code{Y} when a placebo treatment is available.
 #' When both a placebo outcome and a placebo treatment are available, \code{P} is also included in the regression for \code{N}.
 #' \code{ripp} returns an object of class \code{ripp} that contains key metrics for partial identification.
-#'
-#' @details
-#' To Do: add version that uses just numerical inputs.
 #'
 #' @param type "placebo outcome", "placebo treatment", or "double placebo"
 #' @param ... arguments passed to other methods.
