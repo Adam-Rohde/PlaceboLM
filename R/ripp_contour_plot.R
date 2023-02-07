@@ -4,7 +4,7 @@ ripp_contour_plot <- function(ripper,
   switcher <- switch(ripper$info$type,
                      "placebo outcome" = ripp_contour_plot.p.outcome,
                      "placebo treatment" = ripp_contour_plot.p.treatment,
-                     "double placebo" = ripp_summary.double.p)
+                     "double placebo" = ripp_contour_plot.double.p)
   switcher(ripper,...)
 }
 
@@ -43,33 +43,32 @@ ripp_contour_plot.p.outcome = function(ripper){
   lambda_val_double = lambda_val_double[order(lambda_val_double)]
 
 
-  contour(x=lambda_val_double,
+  graphics::contour(x=lambda_val_double,
           y=beta_vals,
           z=revised_estimates,method="edge",
-          xlab=expression(gamma~" x "~ sqrt(lambda) == ~"±"~sqrt(R[Y %~% Z %.% list(D,P,X)]^2 %/% R[N %~% Z %.% list(D,P,X)]^2)),
+          xlab=expression(gamma~" x "~ sqrt(lambda) == ~"\U00B1"~sqrt(R[Y %~% Z %.% list(D,P,X)]^2 %/% R[N %~% Z %.% list(D,P,X)]^2)),
           ylab=expression(beta[N %~% D %.% list(P,X,Z)]),col="black",nlevels=20)
-  contour(x=lambda_val_double,
+  graphics::contour(x=lambda_val_double,
           y=beta_vals,
           z=revised_estimates,
           add=T,levels = 0,col = "red",lty=1,lwd = 2,labels = "0",method="edge")
 
-  points(x=kDID,y=0,col="darkgreen",pch=18,cex=1.5)
-  points(x=1,y=0,col="blue",pch=18,cex=1.5)
-  points(x=0,y=0,col="navy",pch=18,cex=1.5)
+  graphics::points(x=kDID,y=0,col="darkgreen",pch=18,cex=1.5)
+  graphics::points(x=1,y=0,col="blue",pch=18,cex=1.5)
+  graphics::points(x=0,y=0,col="navy",pch=18,cex=1.5)
 
-  b_range = sum(abs(range(beta_vals)))
   max_lambda = max(lambda_val_double)
   min_b = min(beta_vals)
 
-  text(bquote("Revised Estimates of "~beta[Y %~% D %.% list(P,X,Z)]),
+  graphics::text(bquote("Revised Estimates of "~beta[Y %~% D %.% list(P,X,Z)]),
        x=0,y=max(beta_vals)*1.02,col="black")
-  text(paste0("DID Estimate = ",round(revised_estimate_did,3),", k = ",round(kDID,3)),
+  graphics::text(paste0("DID Estimate = ",round(revised_estimate_did,3),", k = ",round(kDID,3)),
        x=max_lambda,
        y=1.0*min_b,col="darkgreen",adj=1)
-  text(paste0("DID (k=1) Estimate = ",round(revised_estimate_k1,3),", m = ",round(mDID,3)),
+  graphics::text(paste0("DID (k=1) Estimate = ",round(revised_estimate_k1,3),", m = ",round(mDID,3)),
        x=max_lambda,
        y=0.9*min_b,col="blue",adj=1)
-  text(paste0("SOO Estimate = ",round(beta.yd.px,3)),
+  graphics::text(paste0("SOO Estimate = ",round(beta.yd.px,3)),
        x=max_lambda,
        y=0.8*min_b,col="navy",adj=1)
 
@@ -111,34 +110,37 @@ ripp_contour_plot.p.treatment = function(ripper){
   lambda_val_double = lambda_val_double[order(lambda_val_double)]
 
 
-  contour(x=lambda_val_double,
+  graphics::contour(x=lambda_val_double,
           y=beta_vals,
           z=revised_estimates,method="edge",
-          xlab=expression(gamma~" x "~ sqrt(lambda) == ~"±"~sqrt(R[D %~% Z %.% list(P,X)]^2 %/% R[P %~% Z %.% list(D,X)]^2)),
+          xlab=expression(gamma~" x "~ sqrt(lambda) == ~"\U00B1"~sqrt(R[D %~% Z %.% list(P,X)]^2 %/% R[P %~% Z %.% list(D,X)]^2)),
           ylab=expression(beta[Y %~% P %.% list(D,X,Z)]),col="black",nlevels=20)
-  contour(x=lambda_val_double,
+  graphics::contour(x=lambda_val_double,
           y=beta_vals,
           z=revised_estimates,
           add=T,levels = 0,col = "red",lty=1,lwd = 2,labels = "0",method="edge")
 
-  points(x=kDID,y=0,col="darkgreen",pch=18,cex=1.5)
-  points(x=1,y=0,col="blue",pch=18,cex=1.5)
-  points(x=0,y=0,col="navy",pch=18,cex=1.5)
+  graphics::points(x=kDID,y=0,col="darkgreen",pch=18,cex=1.5)
+  graphics::points(x=1,y=0,col="blue",pch=18,cex=1.5)
+  graphics::points(x=0,y=0,col="navy",pch=18,cex=1.5)
 
-  b_range = sum(abs(range(beta_vals)))
   max_lambda = max(lambda_val_double)
   min_b = min(beta_vals)
 
-  text(bquote("Revised Estimates of "~beta[Y %~% D %.% list(P,X,Z)]),
+  graphics::text(bquote("Revised Estimates of "~beta[Y %~% D %.% list(P,X,Z)]),
        x=0,y=max(beta_vals)*1.02,col="black")
-  text(paste0("DID Estimate = ",round(revised_estimate_did,3),", k = ",round(kDID,3)),
+  graphics::text(paste0("DID Estimate = ",round(revised_estimate_did,3),", k = ",round(kDID,3)),
        x=max_lambda,
        y=1.0*min_b,col="darkgreen",adj=1)
-  text(paste0("DID (k=1) Estimate = ",round(revised_estimate_k1,3),", m = ",round(mDID,3)),
+  graphics::text(paste0("DID (k=1) Estimate = ",round(revised_estimate_k1,3),", m = ",round(mDID,3)),
        x=max_lambda,
        y=0.9*min_b,col="blue",adj=1)
-  text(paste0("SOO Estimate = ",round(beta.yd.px,3)),
+  graphics::text(paste0("SOO Estimate = ",round(beta.yd.px,3)),
        x=max_lambda,
        y=0.8*min_b,col="navy",adj=1)
 
+}
+
+ripp_contour_plot.double.p = function(ripper){
+  print("Plots for double placebos not implemneted yet.")
 }
