@@ -62,7 +62,7 @@ ripp.p.outcome <- function(type,
                         beta.nd.px = coefs.n.dpx[treatment,"Estimate"],
                         se.nd.px = coefs.n.dpx[treatment,"Std. Error"],
                         df.nd.px = lm.n.dpx$df.residual,
-                        scale_factor = (collect$stats$se.yd.px/collect$stats$se.nd.px)*sqrt(collect$stats$df.yd.px/collect$stats$df.nd.px))
+                        scale_factor = (coefs.y.dpx[treatment,"Std. Error"]/coefs.n.dpx[treatment,"Std. Error"])*sqrt(lm.y.dpx$df.residual/lm.n.dpx$df.residual))
 
   class(collect) <- "ripp"
 
@@ -95,7 +95,7 @@ ripp.p.treatment <- function(type,
                         beta.yp.dx = coefs.y.dpx[placebo_treatment,"Estimate"],
                         se.yp.dx = coefs.y.dpx[placebo_treatment,"Std. Error"],
                         df.yp.dx = lm.y.dpx$df.residual,
-                        scale_factor = (collect$stats$se.yd.px/collect$stats$se.yp.dx)*sqrt(collect$stats$df.yd.px/collect$stats$df.yp.dx))
+                        scale_factor = (coefs.y.dpx[treatment,"Std. Error"]/coefs.y.dpx[placebo_treatment,"Std. Error"])*sqrt(lm.y.dpx$df.residual/lm.y.dpx$df.residual))
 
   class(collect) <- "ripp"
 
