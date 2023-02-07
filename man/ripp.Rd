@@ -2,25 +2,52 @@
 % Please edit documentation in R/ripp.R
 \name{ripp}
 \alias{ripp}
+\alias{ripp.p.outcome}
+\alias{ripp.p.treatment}
+\alias{ripp.double.p}
 \title{Partial identification with imperfect placebos}
 \usage{
 ripp(type = c("placebo outcome", "placebo treatment", "double placebo"), ...)
+
+ripp.p.outcome(lm.y.dpx, lm.n.dpx, treatment)
+
+ripp.p.treatment(lm.y.dpx, treatment, placebo_treatment)
+
+ripp.double.p(lm.y.dpx, lm.n.dpx, treatment, placebo_treatment)
 }
 \arguments{
 \item{type}{"placebo outcome", "placebo treatment", or "double placebo"}
 
-\item{...}{arguments passed to other methods. First argument should be a \code{\link{lm}} with the
-outcome regression (argument \code{lm.y.dpx} of the form \code{lm(Y~D+P+X)}). Second argument
-should be a \code{\link{lm}} with the placebo outcome regression (argument \code{lm.n.dpx} of the form \code{lm(N~D+P+X)}),
-when a placebo outcome, \code{N}, is available. \code{P} is a placebo treatment that is included in the regression for
-\code{Y} when a placebo treatment is available. When both a placebo outcome and a placebo treatment are available,
-\code{P} is also included in the regression for \code{N}.}
+\item{...}{arguments passed to other methods.
+\code{lm.y.dpx} is a \code{\link{lm}} with the actual outcome regression.
+\code{lm.n.dpx} is a \code{\link{lm}} with the placebo outcome regression, when a placebo outcome, \code{N}, is available.
+\code{treatment} is the name of the actual treatment.
+\code{placebo_treatment} is the name of the actual treatment.}
+
+\item{lm.y.dpx}{\code{lm(Y~D+P+X)} object.}
+
+\item{lm.n.dpx}{\code{lm(N~D+P+X)} object.}
+
+\item{treatment}{The name of the actual treatment.}
+
+\item{placebo_treatment}{The name of the placebo treatment.}
 }
 \value{
-\code{ripp} object that includes:
+\code{ripp}, a list, that includes
+(1) \code{info} containing (a) the \code{lm} formulas for the actual outcome and placebo outcome regressions and (b) the treatment andplacebo treatment names.
+(2) \code{stats} containing the following items from actual outcome and placebo outcome regressions: (a) the coefficients \code{beta.yd.px, beta.yp.dx, beta.nd.px, beta.np.dx}
+(b) the standard errors \code{se.yd.px, se.yp.dx, se.nd.px, se.np.dx} and (c) the degrees of freedom \code{df.yd.px, df.yp.dx, df.nd.px, df.np.dx}.
 }
 \description{
 This function performs partial identification (or sensitivity analysis) of causal
 effects leveraging information about imperfect placebo outcomes and/or treatments.
-It returns an object of class \code{ripp} that contains key metrics for partial identification.
+\code{Y} is the actual outcome. \code{N} is the placebo outcome. \code{D} is the treatment. \code{P} is the placebo treatment.
+Users need to supply a \code{\link{lm}} object of the form \code{lm(Y~D+P+X)}.
+When a placebo outcome is available, users need to supply a \code{\link{lm}} object of the form \code{lm(N~D+P+X)}.
+\code{P} is a placebo treatment that is included in the regression for \code{Y} when a placebo treatment is available.
+When both a placebo outcome and a placebo treatment are available, \code{P} is also included in the regression for \code{N}.
+\code{ripp} returns an object of class \code{ripp} that contains key metrics for partial identification.
+}
+\details{
+To Do: add version that uses just numerical inputs.
 }
