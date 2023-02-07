@@ -67,6 +67,8 @@ ripp.p.outcome <- function(type,
 
   collect$simple_point_estimates <- simple_point_estimates.p.outcome(ripper_stats = collect$stats)
 
+  collect$robustness_values <- robustness_values.p.outcome(ripper_stats = collect$stats,gamma = 1,lambda = 1,beta.nd.pxz=0,q=1)
+
   class(collect) <- "ripp"
 
   return(collect)
@@ -102,6 +104,8 @@ ripp.p.treatment <- function(type,
                         scale_factor = (coefs.y.dpx[treatment,"Std. Error"]/coefs.y.dpx[placebo_treatment,"Std. Error"])*sqrt(lm.y.dpx$df.residual/lm.y.dpx$df.residual))
 
   collect$simple_point_estimates <- simple_point_estimates.p.treatment(ripper_stats = collect$stats)
+
+  collect$robustness_values <- robustness_values.p.treatment(ripper_stats = collect$stats,gamma = 1,lambda = 1,beta.yp.dxz=0,q=1)
 
   class(collect) <- "ripp"
 
@@ -151,6 +155,8 @@ ripp.double.p <- function(type,
                         )
 
   collect$simple_point_estimates <- simple_point_estimates.double.p(ripper_stats = collect$stats)
+
+  collect$robustness_values <- "RVs for double placebo not yet implemented."
 
   class(collect) <- "ripp"
 

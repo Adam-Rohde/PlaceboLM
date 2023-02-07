@@ -34,4 +34,11 @@ test_that("simple_point_estimates gives correct values", {
   expect_equal(round(ripper_dp$simple_point_estimates$SOO,4), 1.3369)
   expect_equal(round(ripper_dp$simple_point_estimates$perfect_placebo,4), -0.0128)
 
+  expect_equal(round(ripper_po$robustness_values$RV_lambda_q,4), 1.0218)
+  expect_equal(round(ripper_po$robustness_values$RV_beta_q,4), -0.0144)
+
+  expect_equal(round(ripper_pt$robustness_values$RV_lambda_q,4), 0.9985)
+  expect_equal(round(ripper_pt$robustness_values$RV_beta_q,4), 0.001)
+
+
 })
