@@ -25,7 +25,7 @@
 #' (2) \code{stats} containing the following items from actual outcome and placebo outcome regressions: (a) the coefficients \code{beta.yd.px, beta.yp.dx, beta.nd.px, beta.np.dx}
 #' (b) the standard errors \code{se.yd.px, se.yp.dx, se.nd.px, se.np.dx} and (c) the degrees of freedom \code{df.yd.px, df.yp.dx, df.nd.px, df.np.dx}.
 #' @export
-ripp = function(type = c("placebo outcome","placebo treatment","double placebo"),
+ripp <- function(type = c("placebo outcome","placebo treatment","double placebo"),
                             ...){
   type <- match.arg(type)
   switcher <- switch(type,
@@ -41,18 +41,18 @@ ripp = function(type = c("placebo outcome","placebo treatment","double placebo")
 #' @param treatment The name of the actual treatment.
 #' @rdname ripp
 #' @export
-ripp.p.outcome = function(lm.y.dpx,
+ripp.p.outcome <- function(lm.y.dpx,
                         lm.n.dpx,
                         treatment){
-  collect = list()
+  collect <- list()
 
   collect$info <- list(formula.y.dpx = stats::formula(lm.y.dpx),
                        formula.n.dpx = stats::formula(lm.n.dpx),
                        treatment = treatment)
 
 
-  coefs.y.dpx = stats::coef(summary(lm.y.dpx))
-  coefs.n.dpx = stats::coef(summary(lm.n.dpx))
+  coefs.y.dpx <- stats::coef(summary(lm.y.dpx))
+  coefs.n.dpx <- stats::coef(summary(lm.n.dpx))
 
   collect$stats <- list(beta.yd.px = coefs.y.dpx[treatment,"Estimate"],
                         se.yd.px = coefs.y.dpx[treatment,"Std. Error"],
@@ -61,7 +61,7 @@ ripp.p.outcome = function(lm.y.dpx,
                         se.nd.px = coefs.n.dpx[treatment,"Std. Error"],
                         df.nd.px = lm.n.dpx$df.residual)
 
-  class(collect) = "ripp"
+  class(collect) <- "ripp"
 
   return(collect)
 }
@@ -72,17 +72,17 @@ ripp.p.outcome = function(lm.y.dpx,
 #' @param placebo_treatment The name of the placebo treatment.
 #' @rdname ripp
 #' @export
-ripp.p.treatment = function(lm.y.dpx,
+ripp.p.treatment <- function(lm.y.dpx,
                           treatment,
                           placebo_treatment){
-  collect = list()
+  collect <- list()
 
   collect$info <- list(formula.y.dpx = stats::formula(lm.y.dpx),
                        treatment = treatment,
                        placebo_treatment = placebo_treatment)
 
 
-  coefs.y.dpx = stats::coef(summary(lm.y.dpx))
+  coefs.y.dpx <- stats::coef(summary(lm.y.dpx))
 
   collect$stats <- list(beta.yd.px = coefs.y.dpx[treatment,"Estimate"],
                         se.yd.px = coefs.y.dpx[treatment,"Std. Error"],
@@ -91,7 +91,7 @@ ripp.p.treatment = function(lm.y.dpx,
                         se.yp.dx = coefs.y.dpx[placebo_treatment,"Std. Error"],
                         df.yp.dx = lm.y.dpx$df.residual)
 
-  class(collect) = "ripp"
+  class(collect) <- "ripp"
 
   return(collect)
 }
@@ -104,11 +104,11 @@ ripp.p.treatment = function(lm.y.dpx,
 #' @param placebo_treatment The name of the placebo treatment.
 #' @rdname ripp
 #' @export
-ripp.double.p = function(lm.y.dpx,
+ripp.double.p <- function(lm.y.dpx,
                         lm.n.dpx,
                         treatment,
                         placebo_treatment){
-  collect = list()
+  collect <- list()
 
   collect$info <- list(formula.y.dpx = stats::formula(lm.y.dpx),
                        formula.n.dpx = stats::formula(lm.n.dpx),
@@ -116,8 +116,8 @@ ripp.double.p = function(lm.y.dpx,
                        placebo_treatment = placebo_treatment)
 
 
-  coefs.y.dpx = stats::coef(summary(lm.y.dpx))
-  coefs.n.dpx = stats::coef(summary(lm.n.dpx))
+  coefs.y.dpx <- stats::coef(summary(lm.y.dpx))
+  coefs.n.dpx <- stats::coef(summary(lm.n.dpx))
 
   collect$stats <- list(beta.yd.px = coefs.y.dpx[treatment,"Estimate"],
                         se.yd.px = coefs.y.dpx[treatment,"Std. Error"],
@@ -136,7 +136,7 @@ ripp.double.p = function(lm.y.dpx,
                         df.np.dx = lm.n.dpx$df.residual
                         )
 
-  class(collect) = "ripp"
+  class(collect) <- "ripp"
 
   return(collect)
 }
