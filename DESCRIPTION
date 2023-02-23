@@ -17,4 +17,5 @@ BugReports: https://github.com/Adam-Rohde/ripp/issues
 Imports: 
     graphics,
     knitr,
-    stats
+    stats,
+    stringr
