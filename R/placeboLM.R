@@ -182,7 +182,7 @@ placeboLM_point_estimate <- function(plm,
   # get NP bootstrap standard errors and CI
   if(bootstrap == TRUE){
     boot_results = bootstrap_regs(plm, partialIDparam = partialIDparam,n_boot = n_boot)
-    se = sd(boot_results)
+    se = stats::sd(boot_results)
     ci = stats::quantile(boot_results,probs = c(0.025,0.975))
 
     point_estimate_results = t(matrix(c(point_estimate,se,ci)))
