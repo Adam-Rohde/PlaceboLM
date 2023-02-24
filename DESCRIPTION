@@ -15,8 +15,10 @@ Config/testthat/edition: 3
 URL: https://github.com/Adam-Rohde/ripp
 BugReports: https://github.com/Adam-Rohde/ripp/issues
 Imports: 
+    boot,
     graphics,
     knitr,
+    parallel,
     stats,
     stringr,
     tidyr

@@ -118,7 +118,7 @@ placeboLM <- function(data = "",
 
 
 #' @export
-placeboLM_table <- function(plm,n_boot = 100,ptiles = c(0,0.5,1)){
+placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1)){
   # this will provide a table of point estimates that cover the range of partial ID parameters given
 
   param_ranges = plm$partialIDparam_minmax
@@ -142,7 +142,7 @@ placeboLM_table <- function(plm,n_boot = 100,ptiles = c(0,0.5,1)){
   grid_results = cbind(param_vals,matrix(0,ncol = 4,nrow = n_param_combos))
   colnames(grid_results) = c(names(param_ranges),"Estimate","Std. Error","95% CI Low","95% CI High")
   for(i in 1:n_param_combos){
-    grid_results[i,(num_param+1):(num_param+4)] = placeboLM_point_estimate(plm, partialIDparam = as.list(param_vals[i,]),bootstrap = TRUE, n_boot = 100)
+    grid_results[i,(num_param+1):(num_param+4)] = placeboLM_point_estimate(plm, partialIDparam = as.list(param_vals[i,]),bootstrap = TRUE, n_boot = n_boot)
   }
 
   return(grid_results)
@@ -165,7 +165,7 @@ placeboLM_table <- function(plm,n_boot = 100,ptiles = c(0,0.5,1)){
 placeboLM_point_estimate <- function(plm,
                                partialIDparam,
                                bootstrap = TRUE,
-                               n_boot = 100){
+                               n_boot){
   # this will provide a single point estimate, SE, and CI
   # takes in plm object and partialID params
 
@@ -200,25 +200,44 @@ placeboLM_point_estimate <- function(plm,
 
 
 #' @export
-bootstrap_regs <- function(plm,partialIDparam,n_boot = 100){
+bootstrap_regs <- function(plm,partialIDparam,n_boot){
 
   # update this to use a boot strap package or to run it in C++
 
-  n = dim(plm$dta)[1]
-  boot_results = rep(0, n_boot)
 
-  for(i in 1:n_boot){
+  boot_results = boot::boot(data = plm$dta, statistic = boot_funk, R = n_boot,
+                            parallel="multicore",ncpus = parallel::detectCores(all.tests = FALSE, logical = TRUE),
+                            plm = plm,partialIDparam = partialIDparam)$t
 
-    boot_indices = sample(x = 1:n,size = n,replace=TRUE)
-    boot_data = plm$dta[boot_indices,]
-    temp_reg_est = estimate_regs(plm,dset_name="boot_data",dset = boot_data)
-    boot_results[i] = estimate_PLM(plm = plm,partialIDparam = partialIDparam, estimated_regs = temp_reg_est)
+  ################
 
-  }
+  # n = dim(plm$dta)[1]
+  # boot_results = rep(0, n_boot)
+  #
+  # for(i in 1:n_boot){
+  #
+  #   boot_indices = sample(x = 1:n,size = n,replace=TRUE)
+  #   boot_data = plm$dta[boot_indices,]
+  #   temp_reg_est = estimate_regs(plm,dset_name="boot_data",dset = boot_data)
+  #   boot_results[i] = estimate_PLM(plm = plm,partialIDparam = partialIDparam, estimated_regs = temp_reg_est)
+  #
+  # }
+
+  ####################
 
   return(boot_results)
 
 }
+
+#' @export
+boot_funk <- function(boot_data,indys,plm,partialIDparam){
+
+  temp_reg_est = estimate_regs(plm,dset_name="boot_data",dset = boot_data[indys,])
+  out = estimate_PLM(plm = plm,partialIDparam = partialIDparam, estimated_regs = temp_reg_est)
+  return(out)
+
+}
+
 
 
 
