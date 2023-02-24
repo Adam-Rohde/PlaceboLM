@@ -102,6 +102,9 @@ placeboLM <- function(data = "",
     if(PY=="<-"){
       cat("Placebo assumed to be a descendant of outcome.", "\n",
           "Use approach from Cinelli and Hazlett (2020), without conditioning on P.")
+      collect$type = "Single Placebo, Outcome causes Placebo"
+      collect$regressions <- list(
+        reg_Y_on_D = paste0("lm(",outcome,"~",paste0(c(treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"))
     }
     if(PY=="<-" & DP=="<-"){
       cat("Error: Values for PY and DP create a cycle.")
@@ -356,6 +359,22 @@ estimate_PLM <- function(plm,
   }
   else if(plm$type == "Single Placebo, Placebo is Mediator"){}
   else if(plm$type == "Single Placebo, Placebo is Observed Confounder"){}
+  else if(plm$type == "Single Placebo, Outcome causes Placebo"){
+
+    # use approach from Cinelli and Hazlett (2020)
+
+    beta_yd.x = estimated_regs$reg_Y_on_D$betas[plm$treatment]
+    se_yd.x = estimated_regs$reg_Y_on_D$ses[plm$treatment]
+    df_y = estimated_regs$reg_Y_on_D$df
+
+    R_Y_Z_given_DX = partialIDparam$R_Y_Z_given_DX
+    R_Z_D_given_X = partialIDparam$R_Z_D_given_X
+
+    beta_yd.xz = beta_yd.x - ((R_Y_Z_given_DX*R_Z_D_given_X)/sqrt(1-R_Z_D_given_X^2))*(se_yd.x*sqrt(df_y))
+    estimate = beta_yd.xz
+
+  }
+
 
   return(estimate)
 }
