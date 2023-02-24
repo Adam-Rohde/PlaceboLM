@@ -9,8 +9,8 @@ placeboLM <- function(data = "",
                       DP = c("->","<-",""),
                       PY = c("->","<-",""),
                       observed_covariates = "",
-                      partialIDparam_minmax = c(list("coef_P_Y_given_XZ" = c(-2,2),"k_M" = c(-2,2)),
-                                                list("coef_D_P_given_XZ" = c(-2,2),"k_P" = c(-2,2)),
+                      partialIDparam_minmax = c(list("coef_P_D_given_XZ" = c(-2,2),"k" = c(-2,2)),
+                                                list("coef_Y_P_given_DXZ" = c(-2,2),"k" = c(-2,2)),
                                                 list("coef_Y_P_given_DXZ" = c(-2,2),"coef_P_D_given_XZ" = c(-2,2),"R_P_Z_given_DX" = c(-2,2)))
                       ){
   collect <- list(data = data,
@@ -115,10 +115,57 @@ placeboLM <- function(data = "",
 
 
 
+
+
+#' @export
+placeboLM_table <- function(plm,n_boot = 100,ptiles = c(0,0.5,1)){
+  # this will provide a table of point estimates that cover the range of partial ID parameters given
+
+  param_ranges = plm$partialIDparam_minmax
+  num_param = length(param_ranges)
+
+  val_matrix = matrix(0,ncol = length(ptiles),nrow = num_param)
+  row.names(val_matrix) = names(param_ranges)
+  colnames(val_matrix) = ptiles
+  for(i in 1:num_param){
+    val_matrix[i,] = stats::quantile(x = param_ranges[[i]], probs = ptiles)
+    if(i==1){
+      param_vals = val_matrix[i,]
+    } else{
+      param_vals = tidyr::crossing(param_vals,val_matrix[i,],.name_repair = "unique")
+    }
+  }
+  param_vals = as.matrix(param_vals)
+  colnames(param_vals) = names(param_ranges)
+
+  n_param_combos = dim(param_vals)[1]
+  grid_results = cbind(param_vals,matrix(0,ncol = 4,nrow = n_param_combos))
+  colnames(grid_results) = c(names(param_ranges),"Estimate","Std. Error","95% CI Low","95% CI High")
+  for(i in 1:n_param_combos){
+    grid_results[i,(num_param+1):(num_param+4)] = placeboLM_point_estimate(plm, partialIDparam = as.list(param_vals[i,]),bootstrap = TRUE, n_boot = 100)
+  }
+
+  return(grid_results)
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 #' @export
 placeboLM_point_estimate <- function(plm,
                                partialIDparam,
-                               n_boot = 1000){
+                               bootstrap = TRUE,
+                               n_boot = 100){
   # this will provide a single point estimate, SE, and CI
   # takes in plm object and partialID params
 
@@ -128,20 +175,34 @@ placeboLM_point_estimate <- function(plm,
   # get point estimate
   point_estimate = estimate_PLM(plm = plm, partialIDparam = partialIDparam, estimated_regs = reg_estimates)
 
-  # get NP bootstrap standard errors and CI
-  boot_results = bootstrap_regs(plm, partialIDparam = partialIDparam,n_boot = n_boot)
-  se = sd(boot_results)
-  ci = stats::quantile(boot_results,probs = c(0.025,0.975))
 
-  point_estimate_results = t(matrix(c(point_estimate,se,ci)))
-  colnames(point_estimate_results) = c("Estimate","Std. Error","95% CI Low","95% CI High")
+  # get NP bootstrap standard errors and CI
+  if(bootstrap == TRUE){
+    boot_results = bootstrap_regs(plm, partialIDparam = partialIDparam,n_boot = n_boot)
+    se = sd(boot_results)
+    ci = stats::quantile(boot_results,probs = c(0.025,0.975))
+
+    point_estimate_results = t(matrix(c(point_estimate,se,ci)))
+    colnames(point_estimate_results) = c("Estimate","Std. Error","95% CI Low","95% CI High")
+  } else {
+    point_estimate_results = t(matrix(c(point_estimate)))
+    colnames(point_estimate_results) = c("Estimate")
+  }
+
   return(point_estimate_results)
 
 }
 
-#' @export
-bootstrap_regs <- function(plm,partialIDparam,n_boot = 1000){
 
+
+
+
+
+
+#' @export
+bootstrap_regs <- function(plm,partialIDparam,n_boot = 100){
+
+  # update this to use a boot strap package or to run it in C++
 
   n = dim(plm$dta)[1]
   boot_results = rep(0, n_boot)
@@ -206,11 +267,60 @@ estimate_PLM <- function(plm,
 
   # this only provides the PLM estimate, given estimated quantities and assumed quantities
 
-  if(plm$type == "Double Placebo"){}
-  else if(plm$type == "Single Placebo, No Direct Relationships, Placebo Outcome"){}
-  else if(plm$type == "Single Placebo, No Direct Relationships, Placebo Treatment"){}
-  else if(plm$type == "Single Placebo, Treatment causes Placebo"){}
-  else if(plm$type == "Single Placebo, Placebo causes Outcome, Placebo Treatment"){}
+  # update this to fill in all expressions
+
+  if(plm$type == "Double Placebo"){
+
+    beta_yd.px = estimated_regs$reg_Y_on_D_plus_P$betas[plm$treatment]
+    beta_yp.dx = estimated_regs$reg_Y_on_D_plus_P$betas[plm$placebo_treatment]
+    beta_nd.px = estimated_regs$reg_N_on_D_plus_P$betas[plm$treatment]
+    beta_np.dx = estimated_regs$reg_N_on_D_plus_P$betas[plm$placebo_treatment]
+
+    beta_yp.ndxz = partialIDparam$coef_Y_P_given_NDXZ
+    beta_yn.pdxz = partialIDparam$coef_Y_N_given_PDXZ
+    beta_nd.pxz  = partialIDparam$coef_N_D_given_PXZ
+    beta_np.dxz  = partialIDparam$coef_N_P_given_DXZ
+
+    beta_yp.dxz = beta_yp.ndxz + beta_yn.pdxz*beta_np.dxz
+
+    beta_yd.pxz = beta_yd.px - (((beta_yp.dx - beta_yp.dxz)*(beta_nd.px - beta_nd.pxz))/(beta_np.dx - beta_np.dxz))
+    estimate = beta_yd.pxz
+
+  }
+  else if(plm$type == "Single Placebo, No Direct Relationships, Placebo Outcome" |
+          plm$type == "Single Placebo, Treatment causes Placebo"){
+
+    beta_yd.x = estimated_regs$reg_Y_on_D$betas[plm$treatment]
+    beta_pd.x = estimated_regs$reg_P_on_D$betas[plm$treatment]
+    se_yd.x = estimated_regs$reg_Y_on_D$ses[plm$treatment]
+    se_pd.x = estimated_regs$reg_P_on_D$ses[plm$treatment]
+    df_y = estimated_regs$reg_Y_on_D$df
+    df_p = estimated_regs$reg_P_on_D$df
+
+    k = partialIDparam$k
+    beta_pd.xz = partialIDparam$coef_P_D_given_XZ
+
+    beta_yd.xz = beta_yd.x - k*(beta_pd.x - beta_pd.xz)*((se_yd.x*sqrt(df_y))/(se_pd.x*sqrt(df_p)))
+    estimate = beta_yd.xz
+
+  }
+  else if(plm$type == "Single Placebo, No Direct Relationships, Placebo Treatment" |
+          plm$type == "Single Placebo, Placebo causes Outcome, Placebo Treatment"){
+
+    beta_yd.px = estimated_regs$reg_Y_on_D_plus_P$betas[plm$treatment]
+    beta_yp.dx = estimated_regs$reg_Y_on_D_plus_P$betas[plm$placebo_treatment]
+    se_yd.px = estimated_regs$reg_Y_on_D_plus_P$ses[plm$treatment]
+    se_yp.dx = estimated_regs$reg_Y_on_D_plus_P$ses[plm$placebo_treatment]
+    df_y = estimated_regs$reg_Y_on_D_plus_P$df
+    df_p = estimated_regs$reg_Y_on_D_plus_P$df
+
+    k = partialIDparam$k
+    beta_yp.dxz = partialIDparam$coef_Y_P_given_DXZ
+
+    beta_yd.pxz = beta_yd.px - k*(beta_yp.dx - beta_yp.dxz)*((se_yd.px*sqrt(df_y))/(se_yp.dx*sqrt(df_p)))
+    estimate = beta_yd.pxz
+
+  }
   else if(plm$type == "Single Placebo, Placebo causes Outcome, Placebo Outcome"){
 
     beta_yd.px = estimated_regs$reg_Y_on_D_plus_P$betas[plm$treatment]

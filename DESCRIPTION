@@ -18,4 +18,5 @@ Imports:
     graphics,
     knitr,
     stats,
-    stringr
+    stringr,
+    tidyr
