@@ -414,6 +414,9 @@ estimate_PLM <- function(plm,
 placeboLM_contour_plot <- function(plm){
   # this will provide a contour plot of point estimates that cover the range of partial ID parameters given
 
+  # update to work for 3 parameter settings, where we pick one param to fix at min, mid, and max values and create 3 contour plots
+
+
   param_ranges = plm$partialIDparam_minmax
   num_param = length(param_ranges)
   if(num_param>2){
@@ -461,3 +464,7 @@ placeboLM_contour_plot <- function(plm){
   }
 
 }
+
+
+
+
