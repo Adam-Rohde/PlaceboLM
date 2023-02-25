@@ -53,24 +53,4 @@ plm = placeboLM(
 placeboLM_table(plm,n_boot = 100,ptiles = c(0,0.25,0.5,0.75,1))
 
 placeboLM_contour_plot(plm)
-
-
-n = 1000
-Z = stats::rnorm(n)
-D = Z + stats::rnorm(n)
-Y = D + Z + stats::rnorm(n)
-N = 2*D + 2*Z + stats::rnorm(n)
-
-m_Y_DPX = lm(Y ~ D)
-m_N_DPX = lm(N ~ D)
-
-ripper = ripp(type="placebo outcome",lm.y.dpx = m_Y_DPX,lm.n.dpx = m_N_DPX,treatment = "D")
-
-ripp_summary(ripper)
-
-ripp_contour_plot(ripper)
-
-ripp_line_plot(ripper,beta.nd.pxz=0)
-
-ripp_line_plot(ripper,beta.nd.pxz=2)
 ```
