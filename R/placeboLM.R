@@ -45,6 +45,7 @@ placeboLM <- function(data = "",
     cat("Error: No placebo indicated.")
   }
   else {
+    if(placebo_outcome != ""){collect$placebo = placebo_outcome} else {collect$placebo = placebo_treatment}
     if(PY=="" & DP==""){
       cat("Placebo assumed to have no direct relationship with either treatment or outcome.")
       if(placebo_outcome != ""){
@@ -101,7 +102,8 @@ placeboLM <- function(data = "",
     }
     if(PY=="<-"){
       cat("Placebo assumed to be a descendant of outcome.", "\n",
-          "Use approach from Cinelli and Hazlett (2020), without conditioning on P.")
+          "Use approach from Cinelli and Hazlett (2020), without conditioning on P.", "\n",
+          "See 'sensemakr' package.")
       collect$type = "Single Placebo, Outcome causes Placebo"
       collect$regressions <- list(
         reg_Y_on_D = paste0("lm(",outcome,"~",paste0(c(treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"))
@@ -289,7 +291,6 @@ estimate_PLM <- function(plm,
 
   # this only provides the PLM estimate, given estimated quantities and assumed quantities
 
-  # update this to fill in all expressions
 
   if(plm$type == "Double Placebo"){
 
@@ -357,23 +358,40 @@ estimate_PLM <- function(plm,
     estimate = beta_yd.pxz
 
   }
-  else if(plm$type == "Single Placebo, Placebo is Mediator"){}
-  else if(plm$type == "Single Placebo, Placebo is Observed Confounder"){}
-  else if(plm$type == "Single Placebo, Outcome causes Placebo"){
-
-    # use approach from Cinelli and Hazlett (2020)
+  else if(plm$type == "Single Placebo, Placebo is Mediator"){
 
     beta_yd.x = estimated_regs$reg_Y_on_D$betas[plm$treatment]
-    se_yd.x = estimated_regs$reg_Y_on_D$ses[plm$treatment]
-    df_y = estimated_regs$reg_Y_on_D$df
+    beta_yp.dx = estimated_regs$reg_Y_on_D_plus_P$betas[plm$placebo]
+    se_yp.dx = estimated_regs$reg_Y_on_D_plus_P$ses[plm$placebo]
+    se_pd.x = estimated_regs$reg_P_on_D$ses[plm$treatment]
+    df_yp = estimated_regs$reg_Y_on_D_plus_P$df
+    df_pd = estimated_regs$reg_P_on_D$df
 
-    R_Y_Z_given_DX = partialIDparam$R_Y_Z_given_DX
-    R_Z_D_given_X = partialIDparam$R_Z_D_given_X
+    r_yz.pdx = partialIDparam$R_Y_Z_given_PDX
+    r_pz.dx = partialIDparam$R_P_Z_given_DX
+    r_zd.x = partialIDparam$R_Z_D_given_X
 
-    beta_yd.xz = beta_yd.x - ((R_Y_Z_given_DX*R_Z_D_given_X)/sqrt(1-R_Z_D_given_X^2))*(se_yd.x*sqrt(df_y))
+    beta_yd.xz = beta_yd.x - (  (r_yz.pdx/r_pz.dx)*(se_yp.dx*sqrt(df_yp)/sqrt(1-r_pz.dx^2)) + beta_yp.dx - (r_yz.pdx*r_pz.dx/sqrt(1-r_pz.dx^2))*(se_yp.dx*sqrt(df_yp))  )   *   (((r_pz.dx*r_zd.x)/sqrt(1-r_zd.x^2))*se_pd.x*sqrt(df_pd))
     estimate = beta_yd.xz
 
   }
+  else if(plm$type == "Single Placebo, Placebo is Observed Confounder"){
+
+    beta_yd.px = estimated_regs$reg_Y_on_D_plus_P$betas[plm$treatment]
+    beta_yp.dx = estimated_regs$reg_Y_on_D_plus_P$betas[plm$placebo]
+    beta_dp.x = estimated_regs$reg_D_on_P$betas[plm$placebo]
+    se_dp.x = estimated_regs$reg_D_on_P$ses[plm$placebo]
+    df_dp = estimated_regs$reg_D_on_P$df
+
+    r_pz.x = partialIDparam$R_P_Z_given_X
+    r_dz.px = partialIDparam$R_D_Z_given_PX
+    beta_yp.dxz = partialIDparam$coef_Y_P_given_DXZ
+
+    beta_yd.pxz = beta_yd.px - ( (r_pz.x/r_dz.px)*(se_dp.x*sqrt(df_dp)/sqrt(1-r_pz.x^2)) -  beta_dp.x)^(-1)*(beta_yp.dx - beta_yp.dxz)
+    estimate = beta_yd.pxz
+
+  }
+
 
 
   return(estimate)
