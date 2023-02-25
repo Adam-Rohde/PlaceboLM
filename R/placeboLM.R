@@ -396,3 +396,68 @@ estimate_PLM <- function(plm,
 
   return(estimate)
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#' @export
+placeboLM_contour_plot <- function(plm){
+  # this will provide a contour plot of point estimates that cover the range of partial ID parameters given
+
+  param_ranges = plm$partialIDparam_minmax
+  num_param = length(param_ranges)
+  if(num_param>2){
+    cat("More than 2 partial identification parameters specified. Contour plot not possible.")
+  } else if(num_param<=2){
+
+    # get regression estimates
+    reg_estimates = estimate_regs(plm = plm)
+
+    # get all parameter settings to run
+    iter = 100
+    val_matrix = matrix(0,ncol = num_param, nrow = iter)
+    colnames(val_matrix) = names(param_ranges)
+
+    for(i in 1:num_param){
+      val_matrix[,i] = seq(from=min(param_ranges[[i]]),to=max(param_ranges[[i]]),length.out=iter)
+      if(i==1){
+        param_vals = val_matrix[,i]
+      } else{
+        param_vals = tidyr::crossing(param_vals,val_matrix[,i],.name_repair = "unique")
+      }
+    }
+    param_vals = as.matrix(param_vals)
+    colnames(param_vals) = names(param_ranges)
+
+
+    # estimate at all param levels
+    l_param_vals = dim(param_vals)[1]
+    grid_results = cbind(param_vals,rep(0,l_param_vals))
+    for(i in 1:l_param_vals){
+      grid_results[i,3] = estimate_PLM(plm = plm, partialIDparam = as.list(param_vals[i,]), estimated_regs = reg_estimates)
+    }
+    grid_results = as.matrix(reshape(as.data.frame(grid_results), idvar = names(param_ranges)[1], timevar = names(param_ranges)[2], direction = "wide")[,-1])
+
+    graphics::contour(x=val_matrix[,1],
+                      y=val_matrix[,2],
+                      z=grid_results,method="edge",
+                      xlab=names(param_ranges)[1],
+                      ylab=names(param_ranges)[2],
+                      col="black",nlevels=20)
+    graphics::contour(x=val_matrix[,1],
+                      y=val_matrix[,2],
+                      z=grid_results,
+                      add=T,levels = 0,col = "red",lty=1,lwd = 2,labels = "0",method="edge")
+  }
+
+}
