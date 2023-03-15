@@ -9,10 +9,13 @@ placeboLM <- function(data = "",
                       DP = c("->","<-",""),
                       PY = c("->","<-",""),
                       observed_covariates = "",
-                      partialIDparam_minmax = c(list("coef_P_D_given_XZ" = c(-2,2),"k" = c(-2,2)),
-                                                list("coef_Y_P_given_DXZ" = c(-2,2),"k" = c(-2,2)),
-                                                list("coef_Y_P_given_DXZ" = c(-2,2),"coef_P_D_given_XZ" = c(-2,2),"R_P_Z_given_DX" = c(-2,2)))
+                      partialIDparam_minmax = c(list(k = c(-2,2),coef_P_D_given_XZ = c(-2,2)))
                       ){
+
+  # double placebo parameters: k_yd_yp k_np_nd coef_Y_D_given_PXZ coef_Y_P_given_DXZ coef_N_D_given_PXZ coef_N_P_given_DXZ
+  # single placebo parameters: k coef_P_D_given_XZ coef_Y_P_given_DXZ coef_D_P_given_XZ coef_P_Y_given_DXZ
+
+  # create a list to collect parameters for placeboLM
   collect <- list(data = data,
                   placebo_data = placebo_data,
                   dta = eval(parse(text=data)),
@@ -25,8 +28,11 @@ placeboLM <- function(data = "",
                   observed_covariates = observed_covariates,
                   partialIDparam_minmax = partialIDparam_minmax)
 
+  # depending on inputs for placeboLM, categorize placebo type and create relevant regression formulas
+
+  # Double Placebo: when placebo_outcome != "" & placebo_treatment != ""
   if(placebo_outcome != "" & placebo_treatment != ""){
-    cat("Both a placebo treatment and a placebo outcome have been indicated.", "\n",
+    message(cat("Both a placebo treatment and a placebo outcome have been indicated.", "\n",
         "PlaceboLM assumes a 'double placebo' setting is desired.", "\n",
         "PlaceboLM assumes the following causal relations:", "\n",
         "    D->N", "\n",
@@ -35,84 +41,114 @@ placeboLM <- function(data = "",
         "    P->Y", "\n",
         "    N->Y", "\n",
         "If you wish to assume that one of these causal relations does not exist", "\n",
-        "set the relavant partial identification parameter to zero.")
+        "set the relavant partial identification parameter to zero."))
     collect$type = "Double Placebo"
     collect$regressions <- list(
-      reg_Y_on_D_plus_P = paste0("lm(",outcome,"~",paste0(c(treatment,placebo_treatment,observed_covariates),collapse = " + ")," , data = plm$dta )"),
+      reg_Y_on_D_plus_P = paste0("lm(",outcome,"~",paste0(c(treatment,placebo_treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"),
       reg_N_on_D_plus_P = paste0("lm(",placebo_outcome,"~",paste0(c(treatment,placebo_treatment,observed_covariates),collapse = " + ")," , data = plm$dta)")
       )
+
+  # if no placebo is indicated, return a warning
   } else if(placebo_outcome == "" & placebo_treatment == ""){
-    cat("Error: No placebo indicated.")
+    warning("No placebo indicated.")
   }
   else {
+
+    # create a 'placebo' variable
     if(placebo_outcome != ""){collect$placebo = placebo_outcome} else {collect$placebo = placebo_treatment}
-    if(PY=="" & DP==""){
-      cat("Placebo assumed to have no direct relationship with either treatment or outcome.")
+    if(placebo_outcome != ""){placebo = placebo_outcome} else {placebo = placebo_treatment}
+
+    # return a warning when a cycle is specified
+    if(PY=="<-" & DP=="<-"){
+      warning("Values for PY and DP create a cycle.")
+    }
+
+    # Single Placebo, No Direct Relationships: when 'PY' and 'DP' are both missing
+    else if(PY=="" & DP==""){
+      message(cat("Placebo assumed to have no direct relationship with either treatment or outcome."))
       if(placebo_outcome != ""){
         collect$type = "Single Placebo, No Direct Relationships, Placebo Outcome"
         collect$regressions <- list(
           reg_Y_on_D = paste0("lm(",outcome,"~",paste0(c(treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"),
-          reg_P_on_D = paste0("lm(",placebo_outcome,"~",paste0(c(treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"))
+          reg_P_on_D = paste0("lm(",placebo,"~",paste0(c(treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"))
       } else if(placebo_treatment != ""){
         collect$type = "Single Placebo, No Direct Relationships, Placebo Treatment"
         collect$regressions <- list(
-          reg_Y_on_D_plus_P = paste0("lm(",outcome,"~",paste0(c(treatment,placebo_treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"))
+          reg_Y_on_D_plus_P = paste0("lm(",outcome,"~",paste0(c(treatment,placebo,observed_covariates),collapse = " + ")," , data = plm$dta)"))
       }
     }
-    if(PY=="" & DP=="->"){
-      cat("Placebo assumed to be directly caused by treatment.")
+
+    # Single Placebo, Treatment causes Placebo: when DP=="->" but PY==""
+    else if(PY=="" & DP=="->"){
+      message(cat("Placebo assumed to be directly caused by treatment."))
       collect$type = "Single Placebo, Treatment causes Placebo"
-      if(placebo_outcome != ""){placebo = placebo_outcome} else {placebo = placebo_treatment}
       collect$regressions <- list(
         reg_Y_on_D = paste0("lm(",outcome,"~",paste0(c(treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"),
         reg_P_on_D = paste0("lm(",placebo,"~",paste0(c(treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"))
     }
-    if(PY=="->" & DP==""){
-      cat("Placebo assumed to directly cause outcome.")
+
+    # Single Placebo, Placebo causes Outcome: when PY=="->" & DP==""
+    else if(PY=="->" & DP==""){
+      message(cat("Placebo assumed to directly cause outcome."))
       if(placebo_treatment != ""){
         collect$type = "Single Placebo, Placebo causes Outcome, Placebo Treatment"
         collect$regressions <- list(
-          reg_Y_on_D_plus_P = paste0("lm(",outcome,"~",paste0(c(treatment,placebo_treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"))
+          reg_Y_on_D_plus_P = paste0("lm(",outcome,"~",paste0(c(treatment,placebo,observed_covariates),collapse = " + ")," , data = plm$dta)"))
       } else if(placebo_outcome != ""){
         collect$type = "Single Placebo, Placebo causes Outcome, Placebo Outcome"
         collect$regressions <- list(
-          reg_Y_on_D_plus_P = paste0("lm(",outcome,"~",paste0(c(treatment,placebo_outcome,observed_covariates),collapse = " + ")," , data = plm$dta)"),
-          reg_P_on_D = paste0("lm(",placebo_outcome,"~",paste0(c(treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"))
+          reg_Y_on_D_plus_P = paste0("lm(",outcome,"~",paste0(c(treatment,placebo,observed_covariates),collapse = " + ")," , data = plm$dta)"),
+          reg_P_on_D = paste0("lm(",placebo,"~",paste0(c(treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"))
       }
     }
-    if(PY=="->" & DP=="->"){
-      cat("Placebo assumed to be a mediator between treatment and outcome.", "\n",
+
+    # Single Placebo, Placebo is Mediator: when PY=="->" & DP=="->"
+    else if(PY=="->" & DP=="->"){
+      message(cat("Placebo assumed to be a mediator between treatment and outcome.", "\n",
           "For partial identification of the driect or indirect effect", "\n",
           "use approaches from Zhang and Ding (2022).", "\n",
-          "PlaceboLM will assume total effect is target causal contrast.")
-      collect$type = "Single Placebo, Placebo is Mediator"
-      if(placebo_outcome != ""){placebo = placebo_outcome} else {placebo = placebo_treatment}
-      collect$regressions <- list(
-        reg_Y_on_D = paste0("lm(",outcome,"~",paste0(c(treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"),
-        reg_P_on_D = paste0("lm(",placebo,"~",paste0(c(treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"),
-        reg_Y_on_D_plus_P = paste0("lm(",outcome,"~",paste0(c(treatment,placebo,observed_covariates),collapse = " + ")," , data = plm$dta)"))
+          "PlaceboLM will assume total effect is target causal contrast."))
+      if(placebo_outcome != ""){
+        collect$type = "Single Placebo, Placebo is Mediator, Placebo Outcome"
+        collect$regressions <- list(
+          reg_Y_on_D = paste0("lm(",outcome,"~",paste0(c(treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"),
+          reg_P_on_D = paste0("lm(",placebo,"~",paste0(c(treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"))
+      } else if(placebo_treatment != ""){
+        collect$type = "Single Placebo, Placebo is Mediator, Placebo Treatment"
+        collect$regressions <- list(
+          reg_Y_on_D = paste0("lm(",outcome,"~",paste0(c(treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"),
+          reg_Y_on_D_plus_P = paste0("lm(",outcome,"~",paste0(c(treatment,placebo,observed_covariates),collapse = " + ")," , data = plm$dta)"))
+      }
     }
-    if(DP=="<-"){
-      cat("Placebo assumed to be an observed confounder.")
+
+    # Single Placebo, Placebo is Observed Confounder: when DP=="<-"
+    else if(DP=="<-"){
+      message(cat("Placebo assumed to be an observed confounder."))
       collect$type = "Single Placebo, Placebo is Observed Confounder"
       if(placebo_outcome != ""){placebo = placebo_outcome} else {placebo = placebo_treatment}
       collect$regressions <- list(
         reg_Y_on_D_plus_P = paste0("lm(",outcome,"~",paste0(c(treatment,placebo,observed_covariates),collapse = " + ")," , data = plm$dta)"),
         reg_D_on_P = paste0("lm(",treatment,"~",paste0(c(placebo,observed_covariates),collapse = " + ")," , data = plm$dta)"))
     }
-    if(PY=="<-"){
-      cat("Placebo assumed to be a descendant of outcome.", "\n",
-          "Use approach from Cinelli and Hazlett (2020), without conditioning on P.", "\n",
-          "See 'sensemakr' package.")
+
+    # Single Placebo, Outcome causes Placebo: when PY=="<-"
+    else if(PY=="<-"){
+      message(cat("Placebo assumed to be a descendant of outcome."))
       collect$type = "Single Placebo, Outcome causes Placebo"
       collect$regressions <- list(
-        reg_Y_on_D = paste0("lm(",outcome,"~",paste0(c(treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"))
+        reg_Y_on_D = paste0("lm(",outcome,"~",paste0(c(treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"),
+        reg_P_on_Y_plus_D = paste0("lm(",placebo,"~",paste0(c(outcome,treatment,observed_covariates),collapse = " + ")," , data = plm$dta)"))
     }
-    if(PY=="<-" & DP=="<-"){
-      cat("Error: Values for PY and DP create a cycle.")
-    }
+
+
+  }
+  message(cat("Placebo Type:",collect$type))
+  for(i in 1:length(collect$regressions)){
+    message(cat("Regression",i,":",collect$regressions[[i]]))
   }
 
+
+  # return collect
   class(collect) <- "placeboLM"
   return(collect)
 }
@@ -289,7 +325,7 @@ estimate_PLM <- function(plm,
                          partialIDparam,
                          estimated_regs){
 
-  # this only provides the PLM estimate, given estimated quantities and assumed quantities
+  # this function provides the PLM estimate, given estimated quantities and assumed quantities
 
 
   if(plm$type == "Double Placebo"){
@@ -299,19 +335,23 @@ estimate_PLM <- function(plm,
     beta_nd.px = estimated_regs$reg_N_on_D_plus_P$betas[plm$treatment]
     beta_np.dx = estimated_regs$reg_N_on_D_plus_P$betas[plm$placebo_treatment]
 
-    beta_yp.ndxz = partialIDparam$coef_Y_P_given_NDXZ
-    beta_yn.pdxz = partialIDparam$coef_Y_N_given_PDXZ
-    beta_nd.pxz  = partialIDparam$coef_N_D_given_PXZ
-    beta_np.dxz  = partialIDparam$coef_N_P_given_DXZ
+    k_yd_yp = partialIDparam$k_yd_yp
+    k_np_nd = partialIDparam$k_np_nd
+    beta_yd.pxz = partialIDparam$coef_Y_D_given_PXZ
+    beta_yp.dxz = partialIDparam$coef_Y_P_given_DXZ
+    beta_nd.pxz = partialIDparam$coef_N_D_given_PXZ
+    beta_np.dxz = partialIDparam$coef_N_P_given_DXZ
 
-    beta_yp.dxz = beta_yp.ndxz + beta_yn.pdxz*beta_np.dxz
+    #add functionality to reason about beta_yp.ndxz, beta_yn.pdxz, beta_np.dxz
+    #beta_yp.dxz = beta_yp.ndxz + beta_yn.pdxz*beta_np.dxz
 
-    beta_yd.pxz = beta_yd.px - (((beta_yp.dx - beta_yp.dxz)*(beta_nd.px - beta_nd.pxz))/(beta_np.dx - beta_np.dxz))
+    beta_yd.pxz = beta_yd.px - k_yd_yp*k_np_nd*((beta_yp.dx - beta_yp.dxz)*(beta_nd.px - beta_nd.pxz)/(beta_np.dx - beta_np.dxz))
     estimate = beta_yd.pxz
 
   }
   else if(plm$type == "Single Placebo, No Direct Relationships, Placebo Outcome" |
-          plm$type == "Single Placebo, Treatment causes Placebo"){
+          plm$type == "Single Placebo, Treatment causes Placebo" |
+          plm$type == "Single Placebo, Placebo is Mediator, Placebo Outcome"){
 
     beta_yd.x = estimated_regs$reg_Y_on_D$betas[plm$treatment]
     beta_pd.x = estimated_regs$reg_P_on_D$betas[plm$treatment]
@@ -347,51 +387,68 @@ estimate_PLM <- function(plm,
   else if(plm$type == "Single Placebo, Placebo causes Outcome, Placebo Outcome"){
 
     beta_yd.px = estimated_regs$reg_Y_on_D_plus_P$betas[plm$treatment]
-    beta_yp.dx = estimated_regs$reg_Y_on_D_plus_P$betas[plm$placebo_outcome]
     beta_pd.x  = estimated_regs$reg_P_on_D$betas[plm$treatment]
+    se_yd.px = estimated_regs$reg_Y_on_D_plus_P$ses[plm$treatment]
+    se_pd.x = estimated_regs$reg_P_on_D$ses[plm$treatment]
+    df_y = estimated_regs$reg_Y_on_D_plus_P$df
+    df_p = estimated_regs$reg_P_on_D$df
 
-    beta_yp.dxz = partialIDparam$coef_Y_P_given_DXZ
+    k  = partialIDparam$k
     beta_pd.xz  = partialIDparam$coef_P_D_given_XZ
-    r_pz.dx     = partialIDparam$R_P_Z_given_DX
 
-    beta_yd.pxz = beta_yd.px - ((beta_yp.dx - beta_yp.dxz)*(beta_pd.x - beta_pd.xz))/(r_pz.dx^2)
+    beta_yd.pxz = beta_yd.px - k*(beta_pd.x - beta_pd.xz)*((se_yd.px*sqrt(df_y))/(se_pd.x*sqrt(df_p)))
     estimate = beta_yd.pxz
 
   }
-  else if(plm$type == "Single Placebo, Placebo is Mediator"){
+
+  else if(plm$type == "Single Placebo, Placebo is Mediator, Placebo Treatment"){
 
     beta_yd.x = estimated_regs$reg_Y_on_D$betas[plm$treatment]
     beta_yp.dx = estimated_regs$reg_Y_on_D_plus_P$betas[plm$placebo]
+    se_yd.x = estimated_regs$reg_Y_on_D$ses[plm$treatment]
     se_yp.dx = estimated_regs$reg_Y_on_D_plus_P$ses[plm$placebo]
-    se_pd.x = estimated_regs$reg_P_on_D$ses[plm$treatment]
+    df_yd = estimated_regs$reg_Y_on_D$df
     df_yp = estimated_regs$reg_Y_on_D_plus_P$df
-    df_pd = estimated_regs$reg_P_on_D$df
 
-    r_yz.pdx = partialIDparam$R_Y_Z_given_PDX
-    r_pz.dx = partialIDparam$R_P_Z_given_DX
-    r_zd.x = partialIDparam$R_Z_D_given_X
+    k = partialIDparam$k
+    beta_yp.dxz = partialIDparam$coef_Y_P_given_DXZ
 
-    beta_yd.xz = beta_yd.x - (  (r_yz.pdx/r_pz.dx)*(se_yp.dx*sqrt(df_yp)/sqrt(1-r_pz.dx^2)) + beta_yp.dx - (r_yz.pdx*r_pz.dx/sqrt(1-r_pz.dx^2))*(se_yp.dx*sqrt(df_yp))  )   *   (((r_pz.dx*r_zd.x)/sqrt(1-r_zd.x^2))*se_pd.x*sqrt(df_pd))
+    beta_yd.xz = beta_yd.x - k*(beta_yp.dx - beta_yp.dxz)*((se_yd.x*sqrt(df_yd))/(se_yp.dx*sqrt(df_yp)))
     estimate = beta_yd.xz
 
   }
   else if(plm$type == "Single Placebo, Placebo is Observed Confounder"){
 
     beta_yd.px = estimated_regs$reg_Y_on_D_plus_P$betas[plm$treatment]
-    beta_yp.dx = estimated_regs$reg_Y_on_D_plus_P$betas[plm$placebo]
     beta_dp.x = estimated_regs$reg_D_on_P$betas[plm$placebo]
+    se_yd.px = estimated_regs$reg_Y_on_D_plus_P$ses[plm$treatment]
     se_dp.x = estimated_regs$reg_D_on_P$ses[plm$placebo]
+    df_yd = estimated_regs$reg_Y_on_D_plus_P$df
     df_dp = estimated_regs$reg_D_on_P$df
 
-    r_pz.x = partialIDparam$R_P_Z_given_X
-    r_dz.px = partialIDparam$R_D_Z_given_PX
-    beta_yp.dxz = partialIDparam$coef_Y_P_given_DXZ
+    k = partialIDparam$k
+    beta_dp.xz = partialIDparam$coef_D_P_given_XZ
 
-    beta_yd.pxz = beta_yd.px - ( (r_pz.x/r_dz.px)*(se_dp.x*sqrt(df_dp)/sqrt(1-r_pz.x^2)) -  beta_dp.x)^(-1)*(beta_yp.dx - beta_yp.dxz)
+    beta_yd.pxz = beta_yd.px - k*(beta_dp.x - beta_dp.xz)*((se_yd.px*sqrt(df_yd))/(se_dp.x*sqrt(df_dp)))
     estimate = beta_yd.pxz
 
   }
 
+  else if(plm$type == "Single Placebo, Outcome causes Placebo"){
+
+    beta_yd.x = estimated_regs$reg_Y_on_D$betas[plm$treatment]
+    beta_py.dx = estimated_regs$reg_P_on_Y_plus_D$betas[plm$outcome]
+    se_yd.x = estimated_regs$reg_Y_on_D$ses[plm$treatment]
+    se_py.dx = estimated_regs$reg_P_on_Y_plus_D$ses[plm$outcome]
+    df_yd = estimated_regs$reg_Y_on_D$df
+    df_py = estimated_regs$reg_P_on_Y_plus_D$df
+
+    k = partialIDparam$k
+    beta_py.dxz = partialIDparam$coef_P_Y_given_DXZ
+
+    beta_yd.xz = beta_yd.x - k*(beta_py.dx - beta_py.dxz)*((se_yd.x*sqrt(df_yd))/(se_py.dx*sqrt(df_py)))
+    estimate = beta_yd.xz
+  }
 
 
   return(estimate)
@@ -420,7 +477,7 @@ placeboLM_contour_plot <- function(plm){
   param_ranges = plm$partialIDparam_minmax
   num_param = length(param_ranges)
   if(num_param>2){
-    cat("More than 2 partial identification parameters specified. Contour plot not possible.")
+    error(cat("More than 2 partial identification parameters specified. Contour plot not possible."))
   } else if(num_param<=2){
 
     # get regression estimates
