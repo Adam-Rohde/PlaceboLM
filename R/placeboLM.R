@@ -525,3 +525,65 @@ placeboLM_contour_plot <- function(plm){
 
 
 
+
+
+
+# this is a work in proggress
+
+
+#' @export
+placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1)){
+
+  param_ranges = plm$partialIDparam_minmax
+  num_param = length(param_ranges)
+
+  if(num_param>2){
+    error(cat("More than 2 partial identification parameters specified. Contour plot not possible."))
+  } else if(num_param<=2){
+
+    # get regression estimates
+    reg_estimates = estimate_regs(plm = plm)
+
+    # get all parameter settings to run
+    iter = 100
+    if(bootstrap == TRUE){
+      val_matrix = matrix(0,ncol = 4*length(ptiles), nrow = iter)
+      temp = expand.grid(ptiles,c("Estimate","Std. Error","95% CI Low","95% CI High"))
+      colnames(val_matrix) = paste(temp$Var1,temp$Var2)
+      } else {
+      val_matrix = matrix(0,ncol = length(ptiles), nrow = iter)
+      colnames(val_matrix) = ptiles}
+
+    param1_vals = stats::quantile(x = param_ranges[[1]], probs = ptiles)
+    param2_vals = seq(from=min(param_ranges[[2]]),to=max(param_ranges[[2]]),length.out=iter)
+
+    expand.grid(param1_vals,param2_vals)
+
+
+    # estimate at all param levels
+    l_param_vals1 = length(param1_vals)
+    l_param_vals2 = length(param2_vals)
+    for(i in 1:l_param_vals1){
+      for(j in 1:l_param_vals2){
+
+        i=1
+        j=1
+
+        val1 = param1_vals[i]
+        val2 = param2_vals[j]
+
+        val_matrix[i,3] = estimate_PLM(plm = plm, partialIDparam = as.list(param_vals[i,]), estimated_regs = reg_estimates)
+
+        placeboLM_point_estimate(plm = plm,partialIDparam = as.list(param_vals[i,]), bootstrap = bootstrap,n_boot = n_boot)
+      }
+
+    }
+    #grid_results = as.matrix(reshape(as.data.frame(grid_results), idvar = names(param_ranges)[1], timevar = names(param_ranges)[2], direction = "wide")[,-1])
+
+
+
+
+
+
+}
+}
