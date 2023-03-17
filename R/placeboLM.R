@@ -468,7 +468,7 @@ estimate_PLM <- function(plm,
 
 
 #' @export
-placeboLM_contour_plot <- function(plm){
+placeboLM_contour_plot <- function(plm,gran = 100){
   # this will provide a contour plot of point estimates that cover the range of partial ID parameters given
 
   # update to work for 3 parameter settings, where we pick one param to fix at min, mid, and max values and create 3 contour plots
@@ -477,14 +477,14 @@ placeboLM_contour_plot <- function(plm){
   param_ranges = plm$partialIDparam_minmax
   num_param = length(param_ranges)
   if(num_param>2){
-    error(cat("More than 2 partial identification parameters specified. Contour plot not possible."))
+    error(cat("More than 2 partial identification parameters specified. Contour plot not possible. Use placeboLM_table()."))
   } else if(num_param<=2){
 
     # get regression estimates
     reg_estimates = estimate_regs(plm = plm)
 
     # get all parameter settings to run
-    iter = 100
+    iter = gran
     val_matrix = matrix(0,ncol = num_param, nrow = iter)
     colnames(val_matrix) = names(param_ranges)
 
@@ -532,58 +532,55 @@ placeboLM_contour_plot <- function(plm){
 
 
 #' @export
-placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1)){
+placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1),focus_param = "k",ptile_param = "coef_P_D_given_XZ",gran = 100){
 
   param_ranges = plm$partialIDparam_minmax
   num_param = length(param_ranges)
 
   if(num_param>2){
-    error(cat("More than 2 partial identification parameters specified. Contour plot not possible."))
+    error(cat("More than 2 partial identification parameters specified. Line plot not possible. Use placeboLM_table()."))
   } else if(num_param<=2){
 
     # get regression estimates
     reg_estimates = estimate_regs(plm = plm)
 
     # get all parameter settings to run
-    iter = 100
+    iter = gran
+    val_matrix = matrix(0,ncol = num_param, nrow = iter*length(ptiles))
+    colnames(val_matrix) = names(param_ranges)
+
+
+    val_matrix[,focus_param] = rep(seq(from=min(param_ranges[[focus_param]]),to=max(param_ranges[[focus_param]]),length.out=iter),length(ptiles))
+    ptile_param_ptiles = stats::quantile(x = param_ranges[[ptile_param]], probs = ptiles)
+    val_matrix[,ptile_param] = sort(rep(ptile_param_ptiles,iter))
+
     if(bootstrap == TRUE){
-      val_matrix = matrix(0,ncol = 4*length(ptiles), nrow = iter)
-      temp = expand.grid(ptiles,c("Estimate","Std. Error","95% CI Low","95% CI High"))
-      colnames(val_matrix) = paste(temp$Var1,temp$Var2)
+      grid_results = matrix(0,ncol = 4, nrow = iter*length(ptiles))
+      colnames(grid_results) = c("Estimate","Std. Error","95% CI Low","95% CI High")
       } else {
-      val_matrix = matrix(0,ncol = length(ptiles), nrow = iter)
-      colnames(val_matrix) = ptiles}
-
-    param1_vals = stats::quantile(x = param_ranges[[1]], probs = ptiles)
-    param2_vals = seq(from=min(param_ranges[[2]]),to=max(param_ranges[[2]]),length.out=iter)
-
-    expand.grid(param1_vals,param2_vals)
+      grid_results = matrix(0,ncol = 1, nrow = iter*length(ptiles))
+      colnames(grid_results) = c("Estimate")}
+    grid_results = cbind(val_matrix,grid_results)
 
 
     # estimate at all param levels
-    l_param_vals1 = length(param1_vals)
-    l_param_vals2 = length(param2_vals)
-    for(i in 1:l_param_vals1){
-      for(j in 1:l_param_vals2){
-
-        i=1
-        j=1
-
-        val1 = param1_vals[i]
-        val2 = param2_vals[j]
-
-        val_matrix[i,3] = estimate_PLM(plm = plm, partialIDparam = as.list(param_vals[i,]), estimated_regs = reg_estimates)
-
-        placeboLM_point_estimate(plm = plm,partialIDparam = as.list(param_vals[i,]), bootstrap = bootstrap,n_boot = n_boot)
-      }
-
+    for(i in 1:(iter*length(ptiles))){
+      grid_results[i,(3:dim(grid_results)[2])] = placeboLM_point_estimate(plm = plm,partialIDparam = as.list(grid_results[i,1:2]), bootstrap = bootstrap,n_boot = n_boot)
     }
-    #grid_results = as.matrix(reshape(as.data.frame(grid_results), idvar = names(param_ranges)[1], timevar = names(param_ranges)[2], direction = "wide")[,-1])
 
+    for(g in 1:length(ptiles)){
+      gr1 = grid_results[grid_results[,ptile_param]==ptile_param_ptiles[g],]
 
+      plot(x = gr1[,focus_param], y = gr1[,"Estimate"], type = "l",lwd=2,
+           ylab = "Estimate",
+           xlab = focus_param,
+           main = paste0(ptile_param," = ",ptile_param_ptiles[g]," (",ptiles[g]*100,"th percentile)"),
+           ylim = c(min(grid_results[,"Estimate"]),max(grid_results[,"Estimate"])))
+      graphics::lines(x = gr1[,focus_param], y = gr1[,"95% CI Low"],col="blue",lty = 2)
+      graphics::lines(x = gr1[,focus_param], y = gr1[,"95% CI High"],col="blue",lty = 2)
+      graphics::abline(h=0,col="red",lwd=2)
+      graphics::abline(v=0,col="gray",lwd=1)
+    }
 
-
-
-
-}
+  }
 }
