@@ -159,7 +159,7 @@ placeboLM <- function(data = "",
 
 
 #' @export
-placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1)){
+placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1),alpha = 0.05){
   # this will provide a table of point estimates that cover the range of partial ID parameters given
 
   param_ranges = plm$partialIDparam_minmax
@@ -181,9 +181,9 @@ placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1)){
 
   n_param_combos = dim(param_vals)[1]
   grid_results = cbind(param_vals,matrix(0,ncol = 4,nrow = n_param_combos))
-  colnames(grid_results) = c(names(param_ranges),"Estimate","Std. Error","95% CI Low","95% CI High")
+  colnames(grid_results) = c(names(param_ranges),"Estimate","Std. Error","CI Low","CI High")
   for(i in 1:n_param_combos){
-    grid_results[i,(num_param+1):(num_param+4)] = placeboLM_point_estimate(plm, partialIDparam = as.list(param_vals[i,]),bootstrap = TRUE, n_boot = n_boot)
+    grid_results[i,(num_param+1):(num_param+4)] = placeboLM_point_estimate(plm, partialIDparam = as.list(param_vals[i,]),bootstrap = TRUE, n_boot = n_boot,alpha = 0.05)
   }
 
   return(grid_results)
@@ -206,7 +206,7 @@ placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1)){
 placeboLM_point_estimate <- function(plm,
                                partialIDparam,
                                bootstrap = TRUE,
-                               n_boot){
+                               n_boot,alpha = 0.05){
   # this will provide a single point estimate, SE, and CI
   # takes in plm object and partialID params
 
@@ -221,10 +221,10 @@ placeboLM_point_estimate <- function(plm,
   if(bootstrap == TRUE){
     boot_results = bootstrap_regs(plm, partialIDparam = partialIDparam,n_boot = n_boot)
     se = stats::sd(boot_results)
-    ci = stats::quantile(boot_results,probs = c(0.025,0.975))
+    ci = stats::quantile(boot_results,probs = c(alpha/2,1-(alpha/2)))
 
     point_estimate_results = t(matrix(c(point_estimate,se,ci)))
-    colnames(point_estimate_results) = c("Estimate","Std. Error","95% CI Low","95% CI High")
+    colnames(point_estimate_results) = c("Estimate","Std. Error","CI Low","CI High")
   } else {
     point_estimate_results = t(matrix(c(point_estimate)))
     colnames(point_estimate_results) = c("Estimate")
@@ -504,7 +504,9 @@ placeboLM_contour_plot <- function(plm,gran = 100){
     l_param_vals = dim(param_vals)[1]
     grid_results = cbind(param_vals,rep(0,l_param_vals))
     for(i in 1:l_param_vals){
-      grid_results[i,3] = estimate_PLM(plm = plm, partialIDparam = as.list(param_vals[i,]), estimated_regs = reg_estimates)
+      grid_results[i,3] = estimate_PLM(plm = plm,
+                                       partialIDparam = as.list(param_vals[i,]),
+                                       estimated_regs = reg_estimates)
     }
     grid_results = as.matrix(reshape(as.data.frame(grid_results), idvar = names(param_ranges)[1], timevar = names(param_ranges)[2], direction = "wide")[,-1])
 
@@ -532,7 +534,7 @@ placeboLM_contour_plot <- function(plm,gran = 100){
 
 
 #' @export
-placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1),focus_param = "k",ptile_param = "coef_P_D_given_XZ",gran = 100){
+placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1),focus_param = "k",ptile_param = "coef_P_D_given_XZ",gran = 100,alpha = 0.05){
 
   param_ranges = plm$partialIDparam_minmax
   num_param = length(param_ranges)
@@ -556,7 +558,7 @@ placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1)
 
     if(bootstrap == TRUE){
       grid_results = matrix(0,ncol = 4, nrow = iter*length(ptiles))
-      colnames(grid_results) = c("Estimate","Std. Error","95% CI Low","95% CI High")
+      colnames(grid_results) = c("Estimate","Std. Error","CI Low","CI High")
       } else {
       grid_results = matrix(0,ncol = 1, nrow = iter*length(ptiles))
       colnames(grid_results) = c("Estimate")}
@@ -565,7 +567,11 @@ placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1)
 
     # estimate at all param levels
     for(i in 1:(iter*length(ptiles))){
-      grid_results[i,(3:dim(grid_results)[2])] = placeboLM_point_estimate(plm = plm,partialIDparam = as.list(grid_results[i,1:2]), bootstrap = bootstrap,n_boot = n_boot)
+      grid_results[i,(3:dim(grid_results)[2])] = placeboLM_point_estimate(plm = plm,
+                                                                          partialIDparam = as.list(grid_results[i,1:2]),
+                                                                          bootstrap = bootstrap,
+                                                                          n_boot = n_boot,
+                                                                          alpha = 0.05)
     }
 
     for(g in 1:length(ptiles)){
@@ -575,11 +581,15 @@ placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1)
            ylab = "Estimate",
            xlab = focus_param,
            main = paste0(ptile_param," = ",ptile_param_ptiles[g]," (",ptiles[g]*100,"th percentile)"),
-           ylim = c(min(grid_results[,"Estimate"]),max(grid_results[,"Estimate"])))
-      graphics::lines(x = gr1[,focus_param], y = gr1[,"95% CI Low"],col="blue",lty = 2)
-      graphics::lines(x = gr1[,focus_param], y = gr1[,"95% CI High"],col="blue",lty = 2)
+           ylim = c(min(grid_results[,"CI Low"]),max(grid_results[,"CI High"])))
+
+      graphics::polygon(c(gr1[,focus_param],rev(gr1[,focus_param]) ),
+                        c(gr1[,"CI Low"], rev(gr1[,"CI High"])), col = "lightsteelblue1",lty = "blank")
+      graphics::lines(x = gr1[,focus_param], y = gr1[,"CI Low"],col="blue",lty = 2)
+      graphics::lines(x = gr1[,focus_param], y = gr1[,"CI High"],col="blue",lty = 2)
       graphics::abline(h=0,col="red",lwd=2)
       graphics::abline(v=0,col="gray",lwd=1)
+      graphics::lines(x = gr1[,focus_param], y = gr1[,"Estimate"], type = "l",lwd=2)
     }
 
   }
