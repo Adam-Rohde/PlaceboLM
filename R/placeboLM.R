@@ -186,7 +186,7 @@ placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1),alpha = 0.05){
     grid_results[i,(num_param+1):(num_param+4)] = placeboLM_point_estimate(plm, partialIDparam = as.list(param_vals[i,]),bootstrap = TRUE, n_boot = n_boot,alpha = 0.05)
   }
 
-  return(grid_results)
+  knitr::kable(grid_results)
 
 }
 
@@ -477,7 +477,7 @@ placeboLM_contour_plot <- function(plm,gran = 100){
   param_ranges = plm$partialIDparam_minmax
   num_param = length(param_ranges)
   if(num_param>2){
-    error(cat("More than 2 partial identification parameters specified. Contour plot not possible. Use placeboLM_table()."))
+    warning(cat("More than 2 partial identification parameters specified. Contour plot not possible. Use placeboLM_table()."))
   } else if(num_param<=2){
 
     # get regression estimates
@@ -508,7 +508,7 @@ placeboLM_contour_plot <- function(plm,gran = 100){
                                        partialIDparam = as.list(param_vals[i,]),
                                        estimated_regs = reg_estimates)
     }
-    grid_results = as.matrix(reshape(as.data.frame(grid_results), idvar = names(param_ranges)[1], timevar = names(param_ranges)[2], direction = "wide")[,-1])
+    grid_results = as.matrix(stats::reshape(as.data.frame(grid_results), idvar = names(param_ranges)[1], timevar = names(param_ranges)[2], direction = "wide")[,-1])
 
     graphics::contour(x=val_matrix[,1],
                       y=val_matrix[,2],
@@ -540,7 +540,7 @@ placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1)
   num_param = length(param_ranges)
 
   if(num_param>2){
-    error(cat("More than 2 partial identification parameters specified. Line plot not possible. Use placeboLM_table()."))
+    warning(cat("More than 2 partial identification parameters specified. Line plot not possible. Use placeboLM_table()."))
   } else if(num_param<=2){
 
     # get regression estimates
