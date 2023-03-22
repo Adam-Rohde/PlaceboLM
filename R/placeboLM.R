@@ -158,127 +158,6 @@ placeboLM <- function(data = "",
 
 
 
-#' @export
-placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1),alpha = 0.05){
-  # this will provide a table of point estimates that cover the range of partial ID parameters given
-
-  param_ranges = plm$partialIDparam_minmax
-  num_param = length(param_ranges)
-
-  val_matrix = matrix(0,ncol = length(ptiles),nrow = num_param)
-  row.names(val_matrix) = names(param_ranges)
-  colnames(val_matrix) = ptiles
-  for(i in 1:num_param){
-    val_matrix[i,] = stats::quantile(x = param_ranges[[i]], probs = ptiles)
-    if(i==1){
-      param_vals = val_matrix[i,]
-    } else{
-      param_vals = tidyr::crossing(param_vals,val_matrix[i,],.name_repair = "unique")
-    }
-  }
-  param_vals = as.matrix(param_vals)
-  colnames(param_vals) = names(param_ranges)
-
-  n_param_combos = dim(param_vals)[1]
-  grid_results = cbind(param_vals,matrix(0,ncol = 4,nrow = n_param_combos))
-  colnames(grid_results) = c(names(param_ranges),"Estimate","Std. Error","CI Low","CI High")
-  for(i in 1:n_param_combos){
-    grid_results[i,(num_param+1):(num_param+4)] = placeboLM_point_estimate(plm, partialIDparam = as.list(param_vals[i,]),bootstrap = TRUE, n_boot = n_boot,alpha = 0.05)
-  }
-
-  knitr::kable(grid_results)
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-#' @export
-placeboLM_point_estimate <- function(plm,
-                               partialIDparam,
-                               bootstrap = TRUE,
-                               n_boot,alpha = 0.05){
-  # this will provide a single point estimate, SE, and CI
-  # takes in plm object and partialID params
-
-  # get regression estimates
-  reg_estimates = estimate_regs(plm = plm)
-
-  # get point estimate
-  point_estimate = estimate_PLM(plm = plm, partialIDparam = partialIDparam, estimated_regs = reg_estimates)
-
-
-  # get NP bootstrap standard errors and CI
-  if(bootstrap == TRUE){
-    boot_results = bootstrap_regs(plm, partialIDparam = partialIDparam,n_boot = n_boot)
-    se = stats::sd(boot_results)
-    ci = stats::quantile(boot_results,probs = c(alpha/2,1-(alpha/2)))
-
-    point_estimate_results = t(matrix(c(point_estimate,se,ci)))
-    colnames(point_estimate_results) = c("Estimate","Std. Error","CI Low","CI High")
-  } else {
-    point_estimate_results = t(matrix(c(point_estimate)))
-    colnames(point_estimate_results) = c("Estimate")
-  }
-
-  return(point_estimate_results)
-
-}
-
-
-
-
-
-
-
-#' @export
-bootstrap_regs <- function(plm,partialIDparam,n_boot){
-
-  # update this to use a boot strap package or to run it in C++
-
-
-  boot_results = boot::boot(data = plm$dta, statistic = boot_funk, R = n_boot,
-                            parallel="multicore",ncpus = parallel::detectCores(all.tests = FALSE, logical = TRUE),
-                            plm = plm,partialIDparam = partialIDparam)$t
-
-  ################
-
-  # n = dim(plm$dta)[1]
-  # boot_results = rep(0, n_boot)
-  #
-  # for(i in 1:n_boot){
-  #
-  #   boot_indices = sample(x = 1:n,size = n,replace=TRUE)
-  #   boot_data = plm$dta[boot_indices,]
-  #   temp_reg_est = estimate_regs(plm,dset_name="boot_data",dset = boot_data)
-  #   boot_results[i] = estimate_PLM(plm = plm,partialIDparam = partialIDparam, estimated_regs = temp_reg_est)
-  #
-  # }
-
-  ####################
-
-  return(boot_results)
-
-}
-
-#' @export
-boot_funk <- function(boot_data,indys,plm,partialIDparam){
-
-  temp_reg_est = estimate_regs(plm,dset_name="boot_data",dset = boot_data[indys,])
-  out = estimate_PLM(plm = plm,partialIDparam = partialIDparam, estimated_regs = temp_reg_est)
-  return(out)
-
-}
-
 
 
 
@@ -323,7 +202,8 @@ estimate_regs <- function(plm,dset_name="",dset = NULL){
 #' @export
 estimate_PLM <- function(plm,
                          partialIDparam,
-                         estimated_regs){
+                         estimated_regs,
+                         returned){
 
   # this function provides the PLM estimate, given estimated quantities and assumed quantities
 
@@ -345,6 +225,7 @@ estimate_PLM <- function(plm,
     #add functionality to reason about beta_yp.ndxz, beta_yn.pdxz, beta_np.dxz
     #beta_yp.dxz = beta_yp.ndxz + beta_yn.pdxz*beta_np.dxz
 
+    SF = NA
     beta_yd.pxz = beta_yd.px - k_yd_yp*k_np_nd*((beta_yp.dx - beta_yp.dxz)*(beta_nd.px - beta_nd.pxz)/(beta_np.dx - beta_np.dxz))
     estimate = beta_yd.pxz
 
@@ -363,7 +244,8 @@ estimate_PLM <- function(plm,
     k = partialIDparam$k
     beta_pd.xz = partialIDparam$coef_P_D_given_XZ
 
-    beta_yd.xz = beta_yd.x - k*(beta_pd.x - beta_pd.xz)*((se_yd.x*sqrt(df_y))/(se_pd.x*sqrt(df_p)))
+    SF = ((se_yd.x*sqrt(df_y))/(se_pd.x*sqrt(df_p)))
+    beta_yd.xz = beta_yd.x - k*(beta_pd.x - beta_pd.xz)*SF
     estimate = beta_yd.xz
 
   }
@@ -380,7 +262,8 @@ estimate_PLM <- function(plm,
     k = partialIDparam$k
     beta_yp.dxz = partialIDparam$coef_Y_P_given_DXZ
 
-    beta_yd.pxz = beta_yd.px - k*(beta_yp.dx - beta_yp.dxz)*((se_yd.px*sqrt(df_y))/(se_yp.dx*sqrt(df_p)))
+    SF = ((se_yd.px*sqrt(df_y))/(se_yp.dx*sqrt(df_p)))
+    beta_yd.pxz = beta_yd.px - k*(beta_yp.dx - beta_yp.dxz)*SF
     estimate = beta_yd.pxz
 
   }
@@ -396,7 +279,8 @@ estimate_PLM <- function(plm,
     k  = partialIDparam$k
     beta_pd.xz  = partialIDparam$coef_P_D_given_XZ
 
-    beta_yd.pxz = beta_yd.px - k*(beta_pd.x - beta_pd.xz)*((se_yd.px*sqrt(df_y))/(se_pd.x*sqrt(df_p)))
+    SF = ((se_yd.px*sqrt(df_y))/(se_pd.x*sqrt(df_p)))
+    beta_yd.pxz = beta_yd.px - k*(beta_pd.x - beta_pd.xz)*SF
     estimate = beta_yd.pxz
 
   }
@@ -413,7 +297,8 @@ estimate_PLM <- function(plm,
     k = partialIDparam$k
     beta_yp.dxz = partialIDparam$coef_Y_P_given_DXZ
 
-    beta_yd.xz = beta_yd.x - k*(beta_yp.dx - beta_yp.dxz)*((se_yd.x*sqrt(df_yd))/(se_yp.dx*sqrt(df_yp)))
+    SF = ((se_yd.x*sqrt(df_yd))/(se_yp.dx*sqrt(df_yp)))
+    beta_yd.xz = beta_yd.x - k*(beta_yp.dx - beta_yp.dxz)*SF
     estimate = beta_yd.xz
 
   }
@@ -429,7 +314,8 @@ estimate_PLM <- function(plm,
     k = partialIDparam$k
     beta_dp.xz = partialIDparam$coef_D_P_given_XZ
 
-    beta_yd.pxz = beta_yd.px - k*(beta_dp.x - beta_dp.xz)*((se_yd.px*sqrt(df_yd))/(se_dp.x*sqrt(df_dp)))
+    SF = ((se_yd.px*sqrt(df_yd))/(se_dp.x*sqrt(df_dp)))
+    beta_yd.pxz = beta_yd.px - k*(beta_dp.x - beta_dp.xz)*SF
     estimate = beta_yd.pxz
 
   }
@@ -446,13 +332,184 @@ estimate_PLM <- function(plm,
     k = partialIDparam$k
     beta_py.dxz = partialIDparam$coef_P_Y_given_DXZ
 
-    beta_yd.xz = beta_yd.x - k*(beta_py.dx - beta_py.dxz)*((se_yd.x*sqrt(df_yd))/(se_py.dx*sqrt(df_py)))
+    SF = ((se_yd.x*sqrt(df_yd))/(se_py.dx*sqrt(df_py)))
+    beta_yd.xz = beta_yd.x - k*(beta_py.dx - beta_py.dxz)*SF
     estimate = beta_yd.xz
   }
 
 
-  return(estimate)
+  if(returned == "estimate"){return(estimate)}
+  else if(returned == "SF"){return(SF)}
+
+
 }
+
+
+
+
+#' @export
+boot_funk <- function(boot_data,indys,plm,partialIDparam){
+
+  temp_reg_est = estimate_regs(plm,dset_name="boot_data",dset = boot_data[indys,])
+  out = estimate_PLM(plm = plm,partialIDparam = partialIDparam, estimated_regs = temp_reg_est, returned = "estimate")
+  return(out)
+
+}
+
+
+
+
+
+#' @export
+bootstrap_regs <- function(plm,partialIDparam,n_boot){
+
+  boot_results = boot::boot(data = plm$dta, statistic = boot_funk, R = n_boot,
+                            parallel="multicore",ncpus = parallel::detectCores(all.tests = FALSE, logical = TRUE),
+                            plm = plm,partialIDparam = partialIDparam)$t
+
+  return(boot_results)
+
+}
+
+
+
+
+
+#' @export
+placeboLM_point_estimate <- function(plm,
+                                     partialIDparam,
+                                     bootstrap = TRUE,
+                                     n_boot,alpha = 0.05){
+  # this will provide a single point estimate, SE, and CI
+  # takes in plm object and partialID params
+
+  # get regression estimates
+  reg_estimates = estimate_regs(plm = plm)
+
+  # get point estimate
+  point_estimate = estimate_PLM(plm = plm, partialIDparam = partialIDparam, estimated_regs = reg_estimates, returned = "estimate")
+
+
+  # get NP bootstrap standard errors and CI
+  if(bootstrap == TRUE){
+    boot_results = bootstrap_regs(plm, partialIDparam = partialIDparam,n_boot = n_boot)
+    se = stats::sd(boot_results)
+    ci = stats::quantile(boot_results,probs = c(alpha/2,1-(alpha/2)))
+
+    point_estimate_results = t(matrix(c(point_estimate,se,ci)))
+    colnames(point_estimate_results) = c("Estimate","Std. Error","CI Low","CI High")
+  } else {
+    point_estimate_results = t(matrix(c(point_estimate)))
+    colnames(point_estimate_results) = c("Estimate")
+  }
+
+  return(point_estimate_results)
+
+}
+
+
+
+
+
+
+
+
+
+
+
+#' @export
+placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1),alpha = 0.05){
+  # this will provide a table of point estimates that cover the range of partial ID parameters given
+
+  if(plm$type != "Double Placebo"){
+
+    # get DID and SOO estimates
+    reg_estimates = estimate_regs(plm = plm)
+    no_param_param = list()
+    for(i in 1:length(plm$partialIDparam_minmax)){
+      no_param_param[i] = 0
+    }
+    names(no_param_param) = names(plm$partialIDparam_minmax)
+    scale_factor = estimate_PLM(plm = plm,partialIDparam = no_param_param, estimated_regs = reg_estimates, returned = "SF")
+    kDID = round(1/scale_factor,5)
+
+    SOO_param = no_param_param
+    DID_param = no_param_param
+    DID_k1_param = no_param_param
+    DID_param$k = kDID[[1]]
+    DID_k1_param$k = 1
+
+    SOO_estimate = placeboLM_point_estimate(plm, partialIDparam = SOO_param,bootstrap = TRUE, n_boot = n_boot,alpha = 0.05)
+    DID_estimate = placeboLM_point_estimate(plm, partialIDparam = DID_param,bootstrap = TRUE, n_boot = n_boot,alpha = 0.05)
+    DID_k1_estimate = placeboLM_point_estimate(plm, partialIDparam = DID_k1_param,bootstrap = TRUE, n_boot = n_boot,alpha = 0.05)
+
+    SOO_DID_numerical_results = round(rbind(SOO_estimate,DID_estimate,DID_k1_estimate),2)
+    SOO_DID_results = cbind(rbind(SOO_param,DID_param,DID_k1_param),SOO_DID_numerical_results)
+
+  }
+
+  if(is.na(ptiles[1])){
+
+    message(cat("No percentiles provided."))
+
+    if(plm$type != "Double Placebo"){
+
+      rowname = c("SOO", "Standard DID", "k=1 DID")
+      grid_results  = SOO_DID_results
+      row.names(grid_results) = rowname
+      knitr::kable(grid_results)
+    }
+  } else {
+
+    param_ranges = plm$partialIDparam_minmax
+    num_param = length(param_ranges)
+
+    val_matrix = matrix(0,ncol = length(ptiles),nrow = num_param)
+    row.names(val_matrix) = names(param_ranges)
+    colnames(val_matrix) = ptiles
+    for(i in 1:num_param){
+      val_matrix[i,] = stats::quantile(x = param_ranges[[i]], probs = ptiles)
+      if(i==1){
+        param_vals = val_matrix[i,]
+      } else{
+        param_vals = tidyr::crossing(param_vals,val_matrix[i,],.name_repair = "unique")
+      }
+    }
+    param_vals = as.matrix(param_vals)
+    colnames(param_vals) = names(param_ranges)
+
+    n_param_combos = dim(param_vals)[1]
+    grid_results = cbind(param_vals,matrix(0,ncol = 4,nrow = n_param_combos))
+    colnames(grid_results) = c(names(param_ranges),"Estimate","Std. Error","CI Low","CI High")
+    for(i in 1:n_param_combos){
+      grid_results[i,(num_param+1):(num_param+4)] = placeboLM_point_estimate(plm, partialIDparam = as.list(param_vals[i,]),bootstrap = TRUE, n_boot = n_boot,alpha = 0.05)
+    }
+
+    grid_results = round(grid_results,2)
+
+
+    if(plm$type != "Double Placebo"){
+
+      #combine grid results and DID and SOO results
+      rowname = c("SOO", "Standard DID", "k=1 DID", rep("Grid",dim(grid_results)[1]))
+      grid_results  = rbind(SOO_DID_results,grid_results)
+      row.names(grid_results) = rowname
+
+    }
+
+    knitr::kable(grid_results)
+
+  }
+
+
+
+}
+
+
+
+
+
+
 
 
 
@@ -483,6 +540,24 @@ placeboLM_contour_plot <- function(plm,gran = 100){
     # get regression estimates
     reg_estimates = estimate_regs(plm = plm)
 
+
+    # get DID and SOO estimates
+    no_param_param = list()
+    for(i in 1:length(plm$partialIDparam_minmax)){
+      no_param_param[i] = 0
+    }
+    names(no_param_param) = names(plm$partialIDparam_minmax)
+    scale_factor = estimate_PLM(plm = plm,partialIDparam = no_param_param, estimated_regs = reg_estimates, returned = "SF")
+    kDID = 1/scale_factor
+
+    DID_param = no_param_param
+    DID_param$k = kDID
+    DID_estimate = estimate_PLM(plm = plm,partialIDparam = DID_param, estimated_regs = reg_estimates, returned = "estimate")
+    DID_param$k = 1
+    DID_k1_estimate = estimate_PLM(plm = plm,partialIDparam = DID_param, estimated_regs = reg_estimates, returned = "estimate")
+    SOO_estimate = estimate_PLM(plm = plm,partialIDparam = no_param_param, estimated_regs = reg_estimates, returned = "estimate")
+
+
     # get all parameter settings to run
     iter = gran
     val_matrix = matrix(0,ncol = num_param, nrow = iter)
@@ -506,7 +581,8 @@ placeboLM_contour_plot <- function(plm,gran = 100){
     for(i in 1:l_param_vals){
       grid_results[i,3] = estimate_PLM(plm = plm,
                                        partialIDparam = as.list(param_vals[i,]),
-                                       estimated_regs = reg_estimates)
+                                       estimated_regs = reg_estimates,
+                                       returned = "estimate")
     }
     grid_results = as.matrix(stats::reshape(as.data.frame(grid_results), idvar = names(param_ranges)[1], timevar = names(param_ranges)[2], direction = "wide")[,-1])
 
@@ -520,6 +596,26 @@ placeboLM_contour_plot <- function(plm,gran = 100){
                       y=val_matrix[,2],
                       z=grid_results,
                       add=T,levels = 0,col = "red",lty=1,lwd = 2,labels = "0",method="edge")
+
+
+    graphics::points(x=kDID,y=0,col="darkgreen",pch=15,cex=1.5)
+    graphics::points(x=1,y=0,col="blue",pch=17,cex=1.5)
+    graphics::points(x=0,y=0,col="navy",pch=18,cex=1.5)
+
+    max_k = max(param_vals[,1])
+    max_b = max(param_vals[,2])
+    r_b = range(param_vals[,2])[2] - range(param_vals[,2])[1]
+
+    graphics::text(paste0(intToUtf8(9632)," Standard DID (k=",round(kDID,3),") Estimate = ",round(DID_estimate,1)),
+                   x=max_k,
+                   y=max_b - 0*r_b,col="darkgreen",adj=1)
+    graphics::text(paste0(intToUtf8(9650)," DID (k=1) Estimate = ",round(DID_k1_estimate,1)),
+                   x=max_k,
+                   y=max_b - 0.1*r_b,col="blue",adj=1)
+    graphics::text(paste0(intToUtf8(9670)," SOO Estimate = ",round(SOO_estimate,1)),
+                   x=max_k,
+                   y=max_b - 0.2*r_b,col="navy",adj=1)
+
   }
 
 }
@@ -545,6 +641,25 @@ placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1)
 
     # get regression estimates
     reg_estimates = estimate_regs(plm = plm)
+
+
+    # get DID and SOO estimates
+    no_param_param = list()
+    for(i in 1:length(plm$partialIDparam_minmax)){
+      no_param_param[i] = 0
+    }
+    names(no_param_param) = names(plm$partialIDparam_minmax)
+    scale_factor = estimate_PLM(plm = plm,partialIDparam = no_param_param, estimated_regs = reg_estimates, returned = "SF")
+    kDID = 1/scale_factor
+
+    DID_param = no_param_param
+    DID_param$k = kDID
+    DID_estimate = estimate_PLM(plm = plm,partialIDparam = DID_param, estimated_regs = reg_estimates, returned = "estimate")
+    DID_param$k = 1
+    DID_k1_estimate = estimate_PLM(plm = plm,partialIDparam = DID_param, estimated_regs = reg_estimates, returned = "estimate")
+    SOO_estimate = estimate_PLM(plm = plm,partialIDparam = no_param_param, estimated_regs = reg_estimates, returned = "estimate")
+
+
 
     # get all parameter settings to run
     iter = gran
@@ -590,6 +705,25 @@ placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1)
       graphics::abline(h=0,col="red",lwd=2)
       graphics::abline(v=0,col="gray",lwd=1)
       graphics::lines(x = gr1[,focus_param], y = gr1[,"Estimate"], type = "l",lwd=2)
+
+
+      graphics::points(x=kDID,y=DID_estimate,col="darkgreen",pch=15,cex=1.5)
+      graphics::points(x=1,y=DID_k1_estimate,col="blue",pch=17,cex=1.5)
+      graphics::points(x=0,y=SOO_estimate,col="navy",pch=18,cex=1.5)
+
+      max_k = plm$partialIDparam_minmax$k
+      min_est = min(grid_results[,"Estimate"])
+
+      graphics::text(paste0(intToUtf8(9632)," Standard DID (k=",round(kDID,3),") Estimate = ",round(DID_estimate,1)),
+                     x=max_k,
+                     y=1.0*min_est,col="darkgreen",adj=1)
+      graphics::text(paste0(intToUtf8(9650)," DID (k=1) Estimate = ",round(DID_k1_estimate,1)),
+                     x=max_k,
+                     y=0.9*min_est,col="blue",adj=1)
+      graphics::text(paste0(intToUtf8(9670)," SOO Estimate = ",round(SOO_estimate,1)),
+                     x=max_k,
+                     y=0.8*min_est,col="navy",adj=1)
+
     }
 
   }
