@@ -50,8 +50,9 @@ plm = placeboLM(
   partialIDparam_minmax = list(k = c(-2,2), coef_P_D_given_XZ = c(-15000,15000))
   )
 
+set.seed(0)
 placeboLM_table(plm,
-                n_boot = 100,
+                n_boot = 1000,
                 ptiles = c(0.25,0.5,0.75),
                 alpha = 0.05)
 
@@ -60,8 +61,8 @@ placeboLM_contour_plot(plm,
 
 placeboLM_line_plot(plm,
                     bootstrap=TRUE,
-                    n_boot=100,
-                    ptiles = c(0.5,0.75),
+                    n_boot=1000,
+                    ptiles = c(0.5),
                     focus_param = "k",
                     ptile_param = "coef_P_D_given_XZ",
                     gran= 10,
