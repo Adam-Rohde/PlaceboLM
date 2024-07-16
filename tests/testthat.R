@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/reference/test_package.html#special-files
 
 library(testthat)
-library(ripp)
+library(PlaceboLM)
 
-test_check("ripp")
+test_check("PlaceboLM")
