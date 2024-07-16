@@ -418,7 +418,7 @@ placeboLM_point_estimate <- function(plm,
 
 
 #' @export
-placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1),alpha = 0.05){
+placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1),alpha = 0.05,decimals = 3){
   # this will provide a table of point estimates that cover the range of partial ID parameters given
 
   if(plm$type != "Double Placebo"){
@@ -443,7 +443,7 @@ placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1),alpha = 0.05){
     DID_estimate = placeboLM_point_estimate(plm, partialIDparam = DID_param,bootstrap = TRUE, n_boot = n_boot,alpha = 0.05)
     DID_k1_estimate = placeboLM_point_estimate(plm, partialIDparam = DID_k1_param,bootstrap = TRUE, n_boot = n_boot,alpha = 0.05)
 
-    SOO_DID_numerical_results = round(rbind(SOO_estimate,DID_estimate,DID_k1_estimate),2)
+    SOO_DID_numerical_results = round(rbind(SOO_estimate,DID_estimate,DID_k1_estimate),decimals)
     SOO_DID_results = cbind(rbind(SOO_param,DID_param,DID_k1_param),SOO_DID_numerical_results)
 
   }
@@ -454,7 +454,7 @@ placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1),alpha = 0.05){
 
     if(plm$type != "Double Placebo"){
 
-      rowname = c("SOO", "Standard DID", "k=1 DID")
+      rowname = c("No Unobserved Confounding", "DID", "Perfect Placebo, k=1")
       grid_results  = SOO_DID_results
       row.names(grid_results) = rowname
       #knitr::kable(grid_results)
@@ -486,13 +486,13 @@ placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1),alpha = 0.05){
       grid_results[i,(num_param+1):(num_param+4)] = placeboLM_point_estimate(plm, partialIDparam = as.list(param_vals[i,]),bootstrap = TRUE, n_boot = n_boot,alpha = 0.05)
     }
 
-    grid_results = round(grid_results,2)
+    grid_results = round(grid_results,decimals)
 
 
     if(plm$type != "Double Placebo"){
 
       #combine grid results and DID and SOO results
-      rowname = c("SOO", "Standard DID", "k=1 DID", rep("Grid",dim(grid_results)[1]))
+      rowname = c("No Unobserved Confounding", "DID (m=1)", "Perfect Placebo, k=1", rep("Grid",dim(grid_results)[1]))
       grid_results  = rbind(SOO_DID_results,grid_results)
       row.names(grid_results) = rowname
 
@@ -527,7 +527,7 @@ placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1),alpha = 0.05){
 
 
 #' @export
-placeboLM_contour_plot <- function(plm,gran = 100){
+placeboLM_contour_plot <- function(plm,gran = 100,decimals = 3){
   # this will provide a contour plot of point estimates that cover the range of partial ID parameters given
 
   # update to work for 3 parameter settings, where we pick one param to fix at min, mid, and max values and create 3 contour plots
@@ -610,9 +610,9 @@ placeboLM_contour_plot <- function(plm,gran = 100){
 
 
     graphics::legend(legend=
-                       c(paste0(intToUtf8(9632)," Standard DID (k=",round(kDID,3),") Estimate = ",round(DID_estimate,1)),
-                         paste0(intToUtf8(9650)," DID (k=1) Estimate = ",round(DID_k1_estimate,1)),
-                         paste0(intToUtf8(9670)," SOO Estimate = ",round(SOO_estimate,1))
+                       c(paste0(intToUtf8(9632)," DID (m=1, k=",round(kDID,3),") Estimate = ",round(DID_estimate,decimals)),
+                         paste0(intToUtf8(9650)," Perfect Placebo, k=1 Estimate = ",round(DID_k1_estimate,decimals)),
+                         paste0(intToUtf8(9670)," No Unobserved Confounding Estimate = ",round(SOO_estimate,decimals))
                        ),
                    x=max_k,
                    y=max_b - 0*r_b,text.col=c("darkgreen","blue","navy"),adj=0,xjust =1, bg = "white")
@@ -635,7 +635,7 @@ placeboLM_contour_plot <- function(plm,gran = 100){
 
 
 #' @export
-placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1),focus_param = "k",ptile_param = "coef_P_D_given_XZ",gran = 10,alpha = 0.05){
+placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1),focus_param = "k",ptile_param = "coef_P_D_given_XZ",gran = 10,alpha = 0.05,decimals = 3){
 
   param_ranges = plm$partialIDparam_minmax
   num_param = length(param_ranges)
@@ -697,11 +697,19 @@ placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1)
     for(g in 1:length(ptiles)){
       gr1 = grid_results[grid_results[,ptile_param]==ptile_param_ptiles[g],]
 
-      plot(x = gr1[,focus_param], y = gr1[,"Estimate"], type = "l",lwd=2,
-           ylab = "Estimate",
-           xlab = focus_param,
-           main = paste0(ptile_param," = ",ptile_param_ptiles[g]," (",ptiles[g]*100,"th percentile)"),
-           ylim = c(min(grid_results[,"CI Low"]),max(grid_results[,"CI High"])))
+      if(length(ptiles)=1){
+        plot(x = gr1[,focus_param], y = gr1[,"Estimate"], type = "l",lwd=2,
+             ylab = "Estimate",
+             xlab = focus_param,
+             ylim = c(min(grid_results[,"CI Low"]),max(grid_results[,"CI High"])))
+      } else {
+        plot(x = gr1[,focus_param], y = gr1[,"Estimate"], type = "l",lwd=2,
+             ylab = "Estimate",
+             xlab = focus_param,
+             main = paste0(ptile_param," = ",ptile_param_ptiles[g]," (",ptiles[g]*100,"th percentile)"),
+             ylim = c(min(grid_results[,"CI Low"]),max(grid_results[,"CI High"])))
+      }
+
 
       graphics::polygon(c(gr1[,focus_param],rev(gr1[,focus_param]) ),
                         c(gr1[,"CI Low"], rev(gr1[,"CI High"])), col = "lightsteelblue1",lty = "blank")
@@ -724,13 +732,13 @@ placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1)
       if(gr1[gr1[,focus_param] == x,"Estimate"]<=0){y = max} else {y = min}
 
 
-      graphics::text(paste0(intToUtf8(9632)," Standard DID (k=",round(kDID,3),") Estimate = ",round(DID_estimate,1)),
+      graphics::text(paste0(intToUtf8(9632)," DID (m=1, k=",round(kDID,3),") Estimate = ",round(DID_estimate,decimals)),
                      x=x,
                      y=y + s*0*range,col="darkgreen",adj=1)
-      graphics::text(paste0(intToUtf8(9650)," DID (k=1) Estimate = ",round(DID_k1_estimate,1)),
+      graphics::text(paste0(intToUtf8(9650)," Perfect Placebo, k=1 Estimate = ",round(DID_k1_estimate,decimals)),
                      x=x,
                      y=y + s*0.05*range,col="blue",adj=1)
-      graphics::text(paste0(intToUtf8(9670)," SOO Estimate = ",round(SOO_estimate,1)),
+      graphics::text(paste0(intToUtf8(9670)," No Unobserved Confounding Estimate = ",round(SOO_estimate,decimals)),
                      x=x,
                      y=y + s*0.1*range,col="navy",adj=1)
 
