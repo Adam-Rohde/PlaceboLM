@@ -697,7 +697,7 @@ placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1)
     for(g in 1:length(ptiles)){
       gr1 = grid_results[grid_results[,ptile_param]==ptile_param_ptiles[g],]
 
-      if(length(ptiles)=1){
+      if(length(ptiles)==1){
         plot(x = gr1[,focus_param], y = gr1[,"Estimate"], type = "l",lwd=2,
              ylab = "Estimate",
              xlab = focus_param,
