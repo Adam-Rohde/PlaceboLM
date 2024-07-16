@@ -6,9 +6,9 @@ placeboLM <- function(data = "",
                       treatment,
                       placebo_outcome = "",
                       placebo_treatment = "",
-                      DP = c("->","<-",""),
-                      PY = c("->","<-",""),
-                      observed_covariates = "",
+                      DP = "",#c("->","<-",""),
+                      PY = "",#c("->","<-",""),
+                      observed_covariates = c("1"),
                       partialIDparam_minmax = c(list(k = c(-2,2),coef_P_D_given_XZ = c(-2,2)))
                       ){
 
@@ -457,7 +457,8 @@ placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1),alpha = 0.05){
       rowname = c("SOO", "Standard DID", "k=1 DID")
       grid_results  = SOO_DID_results
       row.names(grid_results) = rowname
-      knitr::kable(grid_results)
+      #knitr::kable(grid_results)
+      print(grid_results)
     }
   } else {
 
@@ -497,7 +498,8 @@ placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1),alpha = 0.05){
 
     }
 
-    knitr::kable(grid_results)
+    #knitr::kable(grid_results)
+    print(grid_results)
 
   }
 
@@ -606,15 +608,21 @@ placeboLM_contour_plot <- function(plm,gran = 100){
     max_b = max(param_vals[,2])
     r_b = range(param_vals[,2])[2] - range(param_vals[,2])[1]
 
-    graphics::text(paste0(intToUtf8(9632)," Standard DID (k=",round(kDID,3),") Estimate = ",round(DID_estimate,1)),
+
+    graphics::legend(legend=
+                       c(paste0(intToUtf8(9632)," Standard DID (k=",round(kDID,3),") Estimate = ",round(DID_estimate,1)),
+                         paste0(intToUtf8(9650)," DID (k=1) Estimate = ",round(DID_k1_estimate,1)),
+                         paste0(intToUtf8(9670)," SOO Estimate = ",round(SOO_estimate,1))
+                       ),
                    x=max_k,
-                   y=max_b - 0*r_b,col="darkgreen",adj=1)
-    graphics::text(paste0(intToUtf8(9650)," DID (k=1) Estimate = ",round(DID_k1_estimate,1)),
-                   x=max_k,
-                   y=max_b - 0.1*r_b,col="blue",adj=1)
-    graphics::text(paste0(intToUtf8(9670)," SOO Estimate = ",round(SOO_estimate,1)),
-                   x=max_k,
-                   y=max_b - 0.2*r_b,col="navy",adj=1)
+                   y=max_b - 0*r_b,text.col=c("darkgreen","blue","navy"),adj=0,xjust =1, bg = "white")
+    # graphics::legend(legend=paste0(intToUtf8(9650)," DID (k=1) Estimate = ",round(DID_k1_estimate,1)),
+    #                x=max_k,
+    #                y=max_b - 0.1*r_b,text.col="blue",adj=0,xjust =1, bg = "white")
+    # graphics::legend(legend=paste0(intToUtf8(9670)," SOO Estimate = ",round(SOO_estimate,1)),
+    #                x=max_k,
+    #                y=max_b - 0.2*r_b,text.col="navy",adj=0,xjust =1, bg = "white")
+
 
   }
 
@@ -626,11 +634,8 @@ placeboLM_contour_plot <- function(plm,gran = 100){
 
 
 
-# this is a work in proggress
-
-
 #' @export
-placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1),focus_param = "k",ptile_param = "coef_P_D_given_XZ",gran = 100,alpha = 0.05){
+placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1),focus_param = "k",ptile_param = "coef_P_D_given_XZ",gran = 10,alpha = 0.05){
 
   param_ranges = plm$partialIDparam_minmax
   num_param = length(param_ranges)
@@ -711,18 +716,23 @@ placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1)
       graphics::points(x=1,y=DID_k1_estimate,col="blue",pch=17,cex=1.5)
       graphics::points(x=0,y=SOO_estimate,col="navy",pch=18,cex=1.5)
 
-      max_k = plm$partialIDparam_minmax$k
-      min_est = min(grid_results[,"Estimate"])
+      x = max(plm$partialIDparam_minmax$k)
+      max = max(gr1[,"CI High"])
+      min = min(gr1[,"CI Low"])
+      range = abs(max - min)
+      if(gr1[gr1[,focus_param] == x,"Estimate"]<=0){s = -1} else {s = 1}
+      if(gr1[gr1[,focus_param] == x,"Estimate"]<=0){y = max} else {y = min}
+
 
       graphics::text(paste0(intToUtf8(9632)," Standard DID (k=",round(kDID,3),") Estimate = ",round(DID_estimate,1)),
-                     x=max_k,
-                     y=1.0*min_est,col="darkgreen",adj=1)
+                     x=x,
+                     y=y + s*0*range,col="darkgreen",adj=1)
       graphics::text(paste0(intToUtf8(9650)," DID (k=1) Estimate = ",round(DID_k1_estimate,1)),
-                     x=max_k,
-                     y=0.9*min_est,col="blue",adj=1)
+                     x=x,
+                     y=y + s*0.05*range,col="blue",adj=1)
       graphics::text(paste0(intToUtf8(9670)," SOO Estimate = ",round(SOO_estimate,1)),
-                     x=max_k,
-                     y=0.8*min_est,col="navy",adj=1)
+                     x=x,
+                     y=y + s*0.1*range,col="navy",adj=1)
 
     }
 
