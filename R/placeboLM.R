@@ -738,7 +738,7 @@ placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1)
                            paste0(intToUtf8(9670)," No Unobserved Confounding Estimate = ",round(SOO_estimate,decimals))
                          ),
                        x=x,
-                       y=y + s*0.1*range,text.col=c("darkgreen","blue","navy"),adj=1,xjust =1, bg = "white")
+                       y=y + s*0.1*range,text.col=c("darkgreen","blue","navy"),adj=0,xjust =1, bg = "white")
 
 
       # graphics::text(paste0(intToUtf8(9632)," DID (m=1, k=",round(kDID,3),") Estimate = ",round(DID_estimate,decimals)),
