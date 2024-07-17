@@ -510,12 +510,19 @@ placeboLM_table <- function(plm,n_boot,ptiles = c(0,0.5,1),alpha = 0.05,decimals
 
 
 
+#' @export
+beta_expression_convert <- function(t){
 
+  if(substr(t,1,1)=="c"){
+    dep = substr(t,6,6)
+    ind = substr(t,8,8)
+    giv = substr(t,16,nchar(t))
+    return(bquote(beta[.(dep) *"~"* .(ind) *"|"* .(giv)]))
+  } else {
+    return(t)
+  }
 
-
-
-
-
+}
 
 
 
@@ -591,8 +598,8 @@ placeboLM_contour_plot <- function(plm,gran = 100,decimals = 3){
     graphics::contour(x=val_matrix[,1],
                       y=val_matrix[,2],
                       z=grid_results,method="edge",
-                      xlab=names(param_ranges)[1],
-                      ylab=names(param_ranges)[2],
+                      xlab=beta_expression_convert(names(param_ranges)[1]),
+                      ylab=beta_expression_convert(names(param_ranges)[2]),
                       col="black",nlevels=20)
     graphics::contour(x=val_matrix[,1],
                       y=val_matrix[,2],
@@ -706,7 +713,7 @@ placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1)
         plot(x = gr1[,focus_param], y = gr1[,"Estimate"], type = "l",lwd=2,
              ylab = "Estimate",
              xlab = focus_param,
-             main = paste0(ptile_param," = ",ptile_param_ptiles[g]," (",ptiles[g]*100,"th percentile)"),
+             main = paste0(beta_expression_convert(ptile_param)," = ",ptile_param_ptiles[g]," (",ptiles[g]*100,"th percentile)"),
              ylim = c(min(grid_results[,"CI Low"]),max(grid_results[,"CI High"])))
       }
 
