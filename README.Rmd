@@ -25,7 +25,7 @@ You can install the development version of 'PlaceboLM' from [GitHub](https://git
 
 ``` r
 # install.packages("devtools")
-#devtools::install_github("Adam-Rohde/PlaceboLM")
+devtools::install_github("Adam-Rohde/PlaceboLM")
 ```
 
 ## LaLonde (1986) Example 
@@ -33,40 +33,40 @@ You can install the development version of 'PlaceboLM' from [GitHub](https://git
 
 
 ```{r}
-# library(PlaceboLM)
-# 
-# data(lalonde,package = "qte")
-# 
-# plm = placeboLM(
-#   data = "lalonde.psid",
-#   placebo_data = NULL,
-#   outcome = "re78",
-#   treatment = "treat",
-#   placebo_outcome = "re74",
-#   placebo_treatment = "",
-#   DP = "",
-#   PY = "",
-#   observed_covariates = c("age", "education", "black", "hispanic", "married", "nodegree"),
-#   partialIDparam_minmax = list(k = c(-2,2), coef_P_D_given_XZ = c(-15000,15000))
-#   )
-# 
-# set.seed(0)
-# placeboLM_table(plm,
-#                 n_boot = 1000,
-#                 ptiles = c(0.25,0.5,0.75),
-#                 alpha = 0.05)
-# 
-# placeboLM_contour_plot(plm,
-#                        gran= 100)
-# 
-# placeboLM_line_plot(plm,
-#                     bootstrap=TRUE,
-#                     n_boot=1000,
-#                     ptiles = c(0.5),
-#                     focus_param = "k",
-#                     ptile_param = "coef_P_D_given_XZ",
-#                     gran= 10,
-#                     alpha = 0.05)
+library(PlaceboLM)
+
+data(lalonde,package = "qte")
+
+plm = placeboLM(
+  data = "lalonde.psid",
+  placebo_data = NULL,
+  outcome = "re78",
+  treatment = "treat",
+  placebo_outcome = "re74",
+  placebo_treatment = "",
+  DP = "",
+  PY = "",
+  observed_covariates = c("age", "education", "black", "hispanic", "married", "nodegree"),
+  partialIDparam_minmax = list(k = c(-2,2), coef_P_D_given_XZ = c(-15000,15000))
+  )
+
+set.seed(0)
+placeboLM_table(plm,
+                n_boot = 1000,
+                ptiles = c(0.25,0.5,0.75),
+                alpha = 0.05)
+
+placeboLM_contour_plot(plm,
+                       gran= 100)
+
+placeboLM_line_plot(plm,
+                    bootstrap=TRUE,
+                    n_boot=1000,
+                    ptiles = c(0.5),
+                    focus_param = "k",
+                    ptile_param = "coef_P_D_given_XZ",
+                    gran= 10,
+                    alpha = 0.05)
 
 ```
 
