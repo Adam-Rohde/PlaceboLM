@@ -713,7 +713,9 @@ placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1)
         plot(x = gr1[,focus_param], y = gr1[,"Estimate"], type = "l",lwd=2,
              ylab = "Estimate",
              xlab = focus_param,
-             main = paste0(beta_expression_convert(ptile_param)," = ",ptile_param_ptiles[g]," (",ptiles[g]*100,"th percentile)"),
+             main = parse(text=paste(deparse(beta_expression_convert(ptile_param)),'*"="*',ptile_param_ptiles[g])),
+             #bquote(beta_expression_convert(ptile_param) %=% .(ptile_param_ptiles[g])),
+             #main = parse(paste0(deparse(beta_expression_convert(ptile_param))," = ",ptile_param_ptiles[g])),
              ylim = c(min(grid_results[,"CI Low"]),max(grid_results[,"CI High"])))
       }
 
@@ -726,37 +728,41 @@ placeboLM_line_plot <- function(plm,bootstrap=TRUE,n_boot=10,ptiles = c(0,0.5,1)
       graphics::abline(v=0,col="gray",lwd=1)
       graphics::lines(x = gr1[,focus_param], y = gr1[,"Estimate"], type = "l",lwd=2)
 
+      if(ptile_param_ptiles[g]==0 & focus_param=="k"){
 
-      graphics::points(x=kDID,y=DID_estimate,col="darkgreen",pch=15,cex=1.5)
-      graphics::points(x=1,y=DID_k1_estimate,col="blue",pch=17,cex=1.5)
-      graphics::points(x=0,y=SOO_estimate,col="navy",pch=18,cex=1.5)
+        graphics::points(x=kDID,y=DID_estimate,col="darkgreen",pch=15,cex=1.5)
+        graphics::points(x=1,y=DID_k1_estimate,col="blue",pch=17,cex=1.5)
+        graphics::points(x=0,y=SOO_estimate,col="navy",pch=18,cex=1.5)
 
-      x = max(plm$partialIDparam_minmax$k)
-      max = max(gr1[,"CI High"])
-      min = min(gr1[,"CI Low"])
-      range = abs(max - min)
-      if(gr1[gr1[,focus_param] == x,"Estimate"]<=0){s = -1} else {s = 1}
-      if(gr1[gr1[,focus_param] == x,"Estimate"]<=0){y = max} else {y = min}
-
-
-      graphics::legend(legend=
-                         c(paste0(intToUtf8(9632)," DID (m=1, k=",round(kDID,3),") Estimate = ",round(DID_estimate,decimals)),
-                           paste0(intToUtf8(9650)," Perfect Placebo, k=1 Estimate = ",round(DID_k1_estimate,decimals)),
-                           paste0(intToUtf8(9670)," No Unobserved Confounding Estimate = ",round(SOO_estimate,decimals))
-                         ),
-                       x=x,
-                       y=y + s*0.1*range,text.col=c("darkgreen","blue","navy"),adj=0,xjust =1, bg = "white")
+        x = max(plm$partialIDparam_minmax$k)
+        max = max(gr1[,"CI High"])
+        min = min(gr1[,"CI Low"])
+        range = abs(max - min)
+        if(gr1[gr1[,focus_param] == x,"Estimate"]<=0){s = -1} else {s = 1}
+        if(gr1[gr1[,focus_param] == x,"Estimate"]<=0){y = max} else {y = min}
 
 
-      # graphics::text(paste0(intToUtf8(9632)," DID (m=1, k=",round(kDID,3),") Estimate = ",round(DID_estimate,decimals)),
-      #                x=x,
-      #                y=y + s*0*range,col="darkgreen",adj=1)
-      # graphics::text(paste0(intToUtf8(9650)," Perfect Placebo, k=1 Estimate = ",round(DID_k1_estimate,decimals)),
-      #                x=x,
-      #                y=y + s*0.05*range,col="blue",adj=1)
-      # graphics::text(paste0(intToUtf8(9670)," No Unobserved Confounding Estimate = ",round(SOO_estimate,decimals)),
-      #                x=x,
-      #                y=y + s*0.1*range,col="navy",adj=1)
+        graphics::legend(legend=
+                           c(paste0(intToUtf8(9632)," DID (m=1, k=",round(kDID,3),") Estimate = ",round(DID_estimate,decimals)),
+                             paste0(intToUtf8(9650)," Perfect Placebo, k=1 Estimate = ",round(DID_k1_estimate,decimals)),
+                             paste0(intToUtf8(9670)," No Unobserved Confounding Estimate = ",round(SOO_estimate,decimals))
+                           ),
+                         x=x,
+                         y=y + s*0.1*range,text.col=c("darkgreen","blue","navy"),adj=0,xjust =1, bg = "white")
+
+
+        # graphics::text(paste0(intToUtf8(9632)," DID (m=1, k=",round(kDID,3),") Estimate = ",round(DID_estimate,decimals)),
+        #                x=x,
+        #                y=y + s*0*range,col="darkgreen",adj=1)
+        # graphics::text(paste0(intToUtf8(9650)," Perfect Placebo, k=1 Estimate = ",round(DID_k1_estimate,decimals)),
+        #                x=x,
+        #                y=y + s*0.05*range,col="blue",adj=1)
+        # graphics::text(paste0(intToUtf8(9670)," No Unobserved Confounding Estimate = ",round(SOO_estimate,decimals)),
+        #                x=x,
+        #                y=y + s*0.1*range,col="navy",adj=1)
+
+      }
+
 
     }
 
