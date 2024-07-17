@@ -87,11 +87,11 @@ placeboLM_contour_plot(plm,
 placeboLM_line_plot(plm,
                     bootstrap=TRUE,
                     n_boot=100,
-                    ptiles = c(0.5),
+                    ptiles = c(0,0.5,1),
                     focus_param = "k",
                     ptile_param = "coef_P_D_given_XZ",
                     gran= 10,
                     alpha = 0.05)
 ```
 
-<img src="man/figures/README-unnamed-chunk-2-2.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-2-2.png" width="100%" /><img src="man/figures/README-unnamed-chunk-2-3.png" width="100%" /><img src="man/figures/README-unnamed-chunk-2-4.png" width="100%" />
