@@ -32,7 +32,7 @@ devtools::install_github("Adam-Rohde/PlaceboLM")
 
 
 
-```{r}
+```{r fig.height=8, fig.width=8}
 library(PlaceboLM)
 
 data(lalonde,package = "qte")
@@ -52,7 +52,7 @@ plm = placeboLM(
 
 set.seed(0)
 placeboLM_table(plm,
-                n_boot = 1000,
+                n_boot = 100,
                 ptiles = c(0.25,0.5,0.75),
                 alpha = 0.05)
 
@@ -61,7 +61,7 @@ placeboLM_contour_plot(plm,
 
 placeboLM_line_plot(plm,
                     bootstrap=TRUE,
-                    n_boot=1000,
+                    n_boot=100,
                     ptiles = c(0.5),
                     focus_param = "k",
                     ptile_param = "coef_P_D_given_XZ",
