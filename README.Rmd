@@ -33,7 +33,7 @@ devtools::install_github("Adam-Rohde/PlaceboLM")
 
 
 ```{r fig.height=8, fig.width=8}
-library(PlaceboLM)
+library(PlaceboLM) 
 
 data(lalonde,package = "qte")
 

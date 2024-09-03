@@ -20,7 +20,7 @@ devtools::install_github("Adam-Rohde/PlaceboLM")
 ## LaLonde (1986) Example
 
 ``` r
-library(PlaceboLM)
+library(PlaceboLM) 
 
 data(lalonde,package = "qte")
 
@@ -84,6 +84,7 @@ placeboLM_contour_plot(plm,
 <img src="man/figures/README-unnamed-chunk-2-1.png" width="100%" />
 
 ``` r
+
 placeboLM_line_plot(plm,
                     bootstrap=TRUE,
                     n_boot=100,
