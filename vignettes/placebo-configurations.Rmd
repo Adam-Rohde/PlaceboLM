@@ -1,0 +1,344 @@
+---
+title: "Placebo Configurations: All Six Single-Placebo Types"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Placebo Configurations: All Six Single-Placebo Types}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse  = TRUE,
+  comment   = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Overview
+
+PlaceboLM supports six distinct single-placebo causal structures, selected via
+the `DP` and `PY` arguments. This vignette walks through each one using a
+common synthetic data-generating process so that the "oracle" answer (the
+value of the sensitivity parameter that recovers the true causal effect) is
+known.
+
+## Data-generating process
+
+```{r dgp}
+library(PlaceboLM)
+
+set.seed(42)
+n <- 2000
+
+U <- rnorm(n)          # unobserved confounder
+X <- rnorm(n)          # observed covariate
+
+D  <- X + U + rnorm(n)          # treatment
+P  <- X + U + rnorm(n)          # placebo (shares confounders with D)
+Y  <- D + X + U + rnorm(n)      # outcome  (true effect of D is 1)
+N  <- D + X + U + rnorm(n)      # placebo outcome (same structure as Y)
+
+dat <- data.frame(Y = Y, D = D, P = P, N = N, X = X, U = U)
+```
+
+The true causal effect of `D` on `Y` is **1**. Both `D` and `P` share the
+same unobserved confounder `U`, and the same is true of `N` (placebo outcome).
+
+For each configuration, the "oracle" regression conditions on both `X` and `U`
+to reveal the residual placebo association after removing all confounding. In
+practice `U` is unobserved; specifying the range of the corresponding
+sensitivity parameter is the analyst's responsibility.
+
+---
+
+## 1. No Direct Relationships — Placebo Outcome
+**`DP = ""`, `PY = ""`**
+
+The placebo outcome `N` is affected by the same confounders as `Y`, but
+neither `D` nor `Y` directly causes `N` (beyond those shared confounders).
+This is the DiD-like setting: pre-treatment outcomes used as a placebo.
+
+Estimating equations:
+$$\hat\beta_{YD \cdot X} \quad\text{and}\quad \hat\beta_{ND \cdot X}$$
+
+Sensitivity parameter: `coef_P_D_given_XZ` = the coefficient of `D` in
+`N ~ D + X + U` (zero means the confounding is fully eliminated by the
+placebo relationship).
+
+```{r type1}
+plm1 <- placeboLM(
+  data                  = dat,
+  outcome               = "Y",
+  treatment             = "D",
+  placebo_outcome       = "N",
+  observed_covariates   = "X",
+  partialIDparam_minmax = list(k = c(-2, 2), coef_P_D_given_XZ = c(-2, 2))
+)
+
+# Oracle: what is coef_P_D_given_XZ when U is observed?
+oracle_coef <- coef(lm(N ~ D + X + U, data = dat))[["D"]]
+cat("Oracle coef_P_D_given_XZ:", round(oracle_coef, 3), "\n")
+cat("PLM estimate at (k=1, oracle coef):",
+    round(placeboLM_point_estimate(
+      plm1, list(k = 1, coef_P_D_given_XZ = oracle_coef),
+      bootstrap = FALSE)[1], 3), "\n")
+```
+
+The oracle value is close to zero because `U` explains most of the `D`–`N`
+association not accounted for by `X`. At `k = 1` and the oracle coefficient,
+the PLM estimate recovers the true effect of 1.
+
+---
+
+## 2. No Direct Relationships — Placebo Treatment
+**`DP = ""`, `PY = ""`**
+
+The placebo *treatment* `P` is used instead of a placebo outcome. Fitting
+`Y ~ D + P + X` and adjusting for residual confounding from `P`.
+
+```{r type2}
+plm2 <- placeboLM(
+  data                  = dat,
+  outcome               = "Y",
+  treatment             = "D",
+  placebo_treatment     = "P",
+  observed_covariates   = "X",
+  partialIDparam_minmax = list(k = c(-2, 2), coef_Y_P_given_DXZ = c(-2, 2))
+)
+
+oracle_coef2 <- coef(lm(Y ~ D + P + X + U, data = dat))[["P"]]
+cat("Oracle coef_Y_P_given_DXZ:", round(oracle_coef2, 3), "\n")
+cat("PLM estimate at (k=1, oracle coef):",
+    round(placeboLM_point_estimate(
+      plm2, list(k = 1, coef_Y_P_given_DXZ = oracle_coef2),
+      bootstrap = FALSE)[1], 3), "\n")
+```
+
+---
+
+## 3. Treatment Causes Placebo (D→P)
+**`DP = "->"`, `PY = ""`**
+
+`D` has a direct causal effect on the placebo outcome `N`, in addition to the
+shared confounders. The adjustment formula still uses the D-coefficient from
+`Y ~ D + X` and `N ~ D + X`, but the interpretation of `coef_P_D_given_XZ`
+now includes the direct D→N effect.
+
+```{r type3}
+# Augment DGP so D causes N directly
+N_dp <- N + 0.5 * D    # D→N direct effect of 0.5
+dat$N_dp <- N_dp
+
+plm3 <- placeboLM(
+  data                  = dat,
+  outcome               = "Y",
+  treatment             = "D",
+  placebo_outcome       = "N_dp",
+  DP                    = "->",
+  observed_covariates   = "X",
+  partialIDparam_minmax = list(k = c(-2, 2), coef_P_D_given_XZ = c(-2, 2))
+)
+
+# Oracle residual coefficient: D in N_dp ~ D + X + U
+oracle_coef3 <- coef(lm(N_dp ~ D + X + U, data = dat))[["D"]]
+cat("Oracle coef_P_D_given_XZ:", round(oracle_coef3, 3), "\n")
+cat("PLM estimate at (k=1, oracle coef):",
+    round(placeboLM_point_estimate(
+      plm3, list(k = 1, coef_P_D_given_XZ = oracle_coef3),
+      bootstrap = FALSE)[1], 3), "\n")
+```
+
+Notice the oracle coefficient is now larger (≈ 0.5 + confounding component)
+relative to the no-direct-path case.
+
+---
+
+## 4. Placebo Causes Outcome (P→Y)
+
+### 4a. Placebo Treatment version
+**`DP = ""`, `PY = "->"`**
+
+The placebo treatment `P` directly causes `Y`. The regression `Y ~ D + P + X`
+includes `P` to absorb its direct effect; residual confounding in the `P`–`Y`
+coefficient is the sensitivity parameter.
+
+```{r type4a}
+Y_py <- Y + 0.3 * P    # P→Y direct effect of 0.3
+dat$Y_py <- Y_py
+
+plm4a <- placeboLM(
+  data                  = dat,
+  outcome               = "Y_py",
+  treatment             = "D",
+  placebo_treatment     = "P",
+  PY                    = "->",
+  observed_covariates   = "X",
+  partialIDparam_minmax = list(k = c(-2, 2), coef_Y_P_given_DXZ = c(-2, 2))
+)
+
+oracle_coef4a <- coef(lm(Y_py ~ D + P + X + U, data = dat))[["P"]]
+cat("Oracle coef_Y_P_given_DXZ:", round(oracle_coef4a, 3), "\n")
+cat("PLM estimate at (k=1, oracle coef):",
+    round(placeboLM_point_estimate(
+      plm4a, list(k = 1, coef_Y_P_given_DXZ = oracle_coef4a),
+      bootstrap = FALSE)[1], 3), "\n")
+```
+
+### 4b. Placebo Outcome version
+**`DP = ""`, `PY = "->"`**
+
+The placebo outcome `N` directly causes `Y`. The estimating equations now use
+`Y ~ D + N + X` and `N ~ D + X`.
+
+```{r type4b}
+Y_py2 <- Y + 0.3 * N
+dat$Y_py2 <- Y_py2
+
+plm4b <- placeboLM(
+  data                  = dat,
+  outcome               = "Y_py2",
+  treatment             = "D",
+  placebo_outcome       = "N",
+  PY                    = "->",
+  observed_covariates   = "X",
+  partialIDparam_minmax = list(k = c(-2, 2), coef_P_D_given_XZ = c(-2, 2))
+)
+
+oracle_coef4b <- coef(lm(N ~ D + X + U, data = dat))[["D"]]
+cat("Oracle coef_P_D_given_XZ:", round(oracle_coef4b, 3), "\n")
+cat("PLM estimate at (k=1, oracle coef):",
+    round(placeboLM_point_estimate(
+      plm4b, list(k = 1, coef_P_D_given_XZ = oracle_coef4b),
+      bootstrap = FALSE)[1], 3), "\n")
+```
+
+---
+
+## 5. Placebo is a Mediator (D→P→Y)
+
+### 5a. Placebo Outcome version
+**`DP = "->"`, `PY = "->"`**
+
+Both `D→N` and `N→Y` direct effects exist. PlaceboLM targets the **total**
+effect of `D` on `Y`. The estimating equations are `Y ~ D + X` and
+`N ~ D + X`.
+
+```{r type5a}
+plm5a <- placeboLM(
+  data                  = dat,
+  outcome               = "Y",
+  treatment             = "D",
+  placebo_outcome       = "N",
+  DP                    = "->",
+  PY                    = "->",
+  observed_covariates   = "X",
+  partialIDparam_minmax = list(k = c(-2, 2), coef_P_D_given_XZ = c(-2, 2))
+)
+```
+
+### 5b. Placebo Treatment version
+**`DP = "->"`, `PY = "->"`**
+
+Both `D→P` and `P→Y` hold. Estimating equations: `Y ~ D + X` and
+`Y ~ D + P + X`.
+
+```{r type5b}
+plm5b <- placeboLM(
+  data                  = dat,
+  outcome               = "Y",
+  treatment             = "D",
+  placebo_treatment     = "P",
+  DP                    = "->",
+  PY                    = "->",
+  observed_covariates   = "X",
+  partialIDparam_minmax = list(k = c(-2, 2), coef_Y_P_given_DXZ = c(-2, 2))
+)
+```
+
+---
+
+## 6. Placebo is an Observed Confounder (P→D)
+**`DP = "<-"`**
+
+`P` directly causes `D` (it is an observed confounder). Estimating equations:
+`Y ~ D + P + X` and `D ~ P + X`. The sensitivity parameter `coef_D_P_given_XZ`
+is the residual coefficient of `P` in `D ~ P + X + U`.
+
+```{r type6}
+D_conf <- D + 0.4 * P    # P→D direct effect
+dat$D_conf <- D_conf
+
+plm6 <- placeboLM(
+  data                  = dat,
+  outcome               = "Y",
+  treatment             = "D_conf",
+  placebo_treatment     = "P",
+  DP                    = "<-",
+  observed_covariates   = "X",
+  partialIDparam_minmax = list(k = c(-2, 2), coef_D_P_given_XZ = c(-2, 2))
+)
+
+oracle_coef6 <- coef(lm(D_conf ~ P + X + U, data = dat))[["P"]]
+cat("Oracle coef_D_P_given_XZ:", round(oracle_coef6, 3), "\n")
+cat("PLM estimate at (k=1, oracle coef):",
+    round(placeboLM_point_estimate(
+      plm6, list(k = 1, coef_D_P_given_XZ = oracle_coef6),
+      bootstrap = FALSE)[1], 3), "\n")
+```
+
+---
+
+## 7. Outcome Causes Placebo (Y→P)
+**`PY = "<-"`**
+
+`Y` has a direct causal effect on the placebo outcome `N` (reverse causation).
+Estimating equations: `Y ~ D + X` and `N ~ Y + D + X`. Sensitivity parameter:
+`coef_P_Y_given_DXZ`.
+
+```{r type7}
+N_yp <- N + 0.4 * Y    # Y→N direct effect
+dat$N_yp <- N_yp
+
+plm7 <- placeboLM(
+  data                  = dat,
+  outcome               = "Y",
+  treatment             = "D",
+  placebo_outcome       = "N_yp",
+  PY                    = "<-",
+  observed_covariates   = "X",
+  partialIDparam_minmax = list(k = c(-2, 2), coef_P_Y_given_DXZ = c(-2, 2))
+)
+
+oracle_coef7 <- coef(lm(N_yp ~ Y + D + X + U, data = dat))[["Y"]]
+cat("Oracle coef_P_Y_given_DXZ:", round(oracle_coef7, 3), "\n")
+cat("PLM estimate at (k=1, oracle coef):",
+    round(placeboLM_point_estimate(
+      plm7, list(k = 1, coef_P_Y_given_DXZ = oracle_coef7),
+      bootstrap = FALSE)[1], 3), "\n")
+```
+
+---
+
+## Summary
+
+| Type | `DP` | `PY` | Placebo kind | Key sensitivity parameter |
+|---|---|---|---|---|
+| No Direct Relationships | `""` | `""` | outcome or treatment | `k`, `coef_P_D_given_XZ` / `coef_Y_P_given_DXZ` |
+| Treatment Causes Placebo | `"->"` | `""` | outcome | `k`, `coef_P_D_given_XZ` |
+| Placebo Causes Outcome | `""` | `"->"` | outcome or treatment | `k`, `coef_P_D_given_XZ` / `coef_Y_P_given_DXZ` |
+| Mediator | `"->"` | `"->"` | outcome or treatment | `k`, `coef_P_D_given_XZ` / `coef_Y_P_given_DXZ` |
+| Observed Confounder | `"<-"` | any | treatment | `k`, `coef_D_P_given_XZ` |
+| Outcome Causes Placebo | any | `"<-"` | outcome | `k`, `coef_P_Y_given_DXZ` |
+
+In every case, setting all sensitivity parameters to zero gives the
+selection-on-observables (SOO) estimate; setting `k` to its DID value recovers
+the difference-in-differences benchmark; and setting `k = 1` with the
+second parameter at zero gives the "perfect placebo" estimate.
+
+## References
+
+Rohde, A. and Hazlett, C. (2025). Causal progress with imperfect placebo
+treatments and outcomes. *Journal of the Royal Statistical Society: Series A*.
+<https://doi.org/10.1093/jrsssa/qnaf001>

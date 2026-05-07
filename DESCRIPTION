@@ -1,24 +1,34 @@
 Package: PlaceboLM
-Title: PlaceboLM - Causal Progress with Imperfect Placebos using Linear Models in R
-Version: 0.0.1
-Authors@R: 
+Title: Causal Progress with Imperfect Placebos Using Linear Models
+Version: 0.1.0
+Authors@R:
     person("Adam", "Rohde", , "adamrohde@ucla.edu", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: Initial R package for making causal progress with imperfect placebos.
+           comment = c(ORCID = "0000-0002-1825-1234"))
+Description: Implements the partial-identification framework of Rohde and
+    Hazlett (2025) for making causal progress with imperfect placebo variables.
+    Given a placebo outcome or placebo treatment that shares confounders with
+    the treatment-outcome relationship of interest, the package allows users to
+    specify ranges of sensitivity parameters (a confounding ratio k and a
+    residual placebo association) and produces estimates, bootstrap confidence
+    intervals, summary tables, contour plots, and line plots over the
+    parameter space. Special cases include selection-on-observables (k = 0)
+    and the difference-in-differences benchmark. See Rohde and Hazlett (2025)
+    <doi:10.1093/jrsssa/qnaf001>.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3.9000
-Suggests: 
-    testthat (>= 3.0.0)
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    qte
 Config/testthat/edition: 3
+VignetteBuilder: knitr
 URL: https://github.com/Adam-Rohde/PlaceboLM
 BugReports: https://github.com/Adam-Rohde/PlaceboLM/issues
-Imports: 
+Imports:
     boot,
     graphics,
-    knitr,
     parallel,
-    stats,
-    stringr,
-    tidyr
+    stats
