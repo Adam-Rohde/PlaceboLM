@@ -12,7 +12,7 @@ A data frame with columns \code{structure}, \code{label}, \code{paper_ref},
 }
 \description{
 Returns a data frame describing each causal structure that \code{\link[=placebo_lm]{placebo_lm()}}
-supports, with the corresponding row of Tables 1 and 2 of Rohde and Hazlett
+supports, with the corresponding row of Tables 2 and 3 of Rohde and Hazlett
 and the name of the structure's sensitivity parameter.
 }
 \examples{

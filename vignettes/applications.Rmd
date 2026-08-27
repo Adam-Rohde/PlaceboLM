@@ -19,7 +19,7 @@ library(PlaceboLM)
 
 This vignette reproduces the two empirical applications in Sections 3.2 and 3.3
 of Rohde and Hazlett. Both need data that is not bundled with the package;
-`data-raw/` contains scripts that fetch and prepare it. Where the data is
+`data-raw/` contains a script that fetches and prepares it. Where the data is
 absent the code is shown but not run, and the paper's published figures are
 quoted so you can check your own run against them.
 
@@ -107,24 +107,33 @@ plm_line_plot(fit_nsw, k = c(0, 2), n_boot = 500)
 
 ## A deliberately badly scaled placebo
 
-The paper also uses 1975 *unemployment* — a binary variable — as a placebo for
+The paper also uses 1975 **employment** — a binary variable — as a placebo for
 1978 earnings in dollars. The scale factor exceeds 40,000. This is the case
 that shows why the package carries both parameterizations: `m` is meaningless
 across such different scales, while `k` remains interpretable. The paper finds
 the true `k` here is 0.33.
 
-```{r nsw-u, eval = FALSE}
-fit_u <- placebo_lm(
+Note the coding. The dataset records *non-employment* (`u75`, equal to one when
+earnings were reported as zero). The paper codes employment instead, so that
+the bias in the placebo relationship shares a sign with the bias in the
+relationship of interest and `k > 0` is the natural expectation.
+
+```{r nsw-u, eval = has_nsw}
+lalonde.psid$e75 <- 1 - lalonde.psid$u75
+
+fit_e75 <- placebo_lm(
   data       = lalonde.psid,
   outcome    = "re78",
   treatment  = "treat",
-  placebo    = "u75",
+  placebo    = "e75",
   covariates = c("age", "education", "black", "hispanic",
                  "married", "nodegree"),
   structure  = "placebo_outcome"
 )
-fit_u$SF                      # very large
-plm_bounds(fit_u, k = c(0, 1), n_boot = 500)
+
+fit_e75$SF                       # exceeds 40,000
+plm_bounds(fit_e75, k = c(0, 1), n_boot = 500)
+plm_solve(fit_e75, target = 1671)   # paper: k = 0.33
 ```
 
 ## Triangulation
@@ -147,7 +156,7 @@ the placebo is pre-treatment, so its imperfection is credibly zero.
 
 ```{r zika, eval = FALSE}
 # See data-raw/zika.R for acquisition from the Harvard Dataverse
-# (Amorim 2022, doi:10.7910/DVN/ENG0IY)
+# (Amorim 2022, doi:10.7910/DVN/ENG0IY); see also Appendix G of the paper
 zika <- readRDS("zika.rds")
 
 fit_zika <- placebo_lm(

@@ -80,9 +80,26 @@ plm_contour_plot(fit, k = c(0, 2))
 | | Meaning | Use when |
 |---|---|---|
 | `m` | Raw ratio of biases. Conventional DID is exactly `m = 1`. | Placebo and outcome are on the same scale — e.g. pre- and post-treatment measures of the same variable. |
-| `k` | Scale-free: a ratio of partial correlations, `m = k * SF`. | They are not. The paper uses binary 1975 unemployment as a placebo for 1978 earnings in dollars, where `SF > 40,000` and `m` is meaningless. |
+| `k` | Scale-free: a ratio of partial correlations, `m = k * SF`. | They are not. The paper uses binary 1975 employment as a placebo for 1978 earnings in dollars, where `SF > 40,000` and `m` is meaningless. |
 
 Supply whichever you can defend; the package converts.
+
+## Analytic and cluster-robust standard errors
+
+With the `m` parameterization the adjusted estimate is exactly a regression
+coefficient on the pseudo-outcome `Y - m * P`, so inference is available in
+closed form:
+
+```r
+plm_analytic(fit, m = 1)
+
+# any variance estimator you like, including cluster-robust
+plm_analytic(fit, m = 1,
+             vcov = function(mod) sandwich::vcovCL(mod, cluster = dat$state))
+```
+
+Reasoning with `k` instead makes the scale factor an estimated quantity; the
+paper recommends the bootstrap there, which is what `plm_grid()` does.
 
 ## Supported causal structures
 
@@ -92,11 +109,11 @@ plm_structure_table()
 
 | `structure` | Paper | Placebo's role |
 |---|---|---|
-| `placebo_outcome` | Table 1[a],[b] | Shares confounders with `Y`, not caused by `D` |
-| `placebo_treatment` | Table 1[a],[c] | Shares confounders with `D`, does not cause `Y` |
-| `observed_confounder_1` | Table 1[c] | Causes `Y`, shares confounders with `D` |
-| `observed_confounder_2` | Table 2[e],[f] | Causes `D` |
-| `post_outcome` | Table 2[g],[h] | A descendant of `Y` (reverse causation) |
+| `placebo_outcome` | Table 2[a],[b] | Shares confounders with `Y`, not caused by `D` |
+| `placebo_treatment` | Table 2[a],[c] | Shares confounders with `D`, does not cause `Y` |
+| `observed_confounder_1` | Table 2[c] | Causes `Y`, shares confounders with `D` |
+| `observed_confounder_2` | Table 3[e],[f] | Causes `D` |
+| `post_outcome` | Table 3[g],[h] | A descendant of `Y` (reverse causation) |
 
 Mediator structures (`D -> P -> Y`) are deliberately **not** supported: the
 paper states that there "the placebo approach becomes very complicated, and we
@@ -110,6 +127,14 @@ vignette("getting-started", package = "PlaceboLM")  # worked simulation
 vignette("structures",      package = "PlaceboLM")  # choosing a structure
 vignette("applications",    package = "PlaceboLM")  # NSW and Zika
 ```
+
+## Reproducing the paper
+
+The example code printed in the paper's appendix uses the pre-0.2.0 interface
+(`placeboLM()`, `estimate_regs()`, `estimate_PLM()`, and the
+`placeboLM_*_plot()` functions). That interface still works and still produces
+the published figures; it warns that it is deprecated. See
+`?"PlaceboLM-deprecated"`.
 
 ## Reference
 

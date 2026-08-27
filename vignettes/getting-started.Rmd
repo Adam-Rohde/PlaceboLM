@@ -18,12 +18,12 @@ answer to check against.
 
 ## The problem
 
-We want the effect of regular exercise (`D`) on heart disease (`Y`). We worry
-that socioeconomic status (`Z`) confounds it: it plausibly affects both the
-ability to exercise and, through diet, healthcare access, and stress, the risk
-of heart disease. We do not observe `Z`.
+We want the effect of regular exercise on heart disease. We worry that
+socioeconomic status confounds it: it plausibly affects both the ability to
+exercise and, through diet, healthcare access, and stress, the risk of heart
+disease. In a real study we would not observe it.
 
-We do observe whether people take supplemental vitamins (`P`). Vitamin use is
+We do observe whether people take supplemental vitamins. Vitamin use is
 plausibly driven by the same health-seeking behaviour and resources that drive
 exercise, but we expect it to have little or no effect on heart disease. That
 makes it a **placebo treatment**: a variable that shares confounders with the
@@ -35,40 +35,50 @@ cannot, in the exercise–heart-disease relationship.
 
 ## Simulating the data
 
+This is the data-generating process from the paper's appendix, unchanged.
+
 ```{r dgp}
 library(PlaceboLM)
 
-set.seed(2023)
+set.seed(1)
 n <- 5000
 
-Z <- runif(n)                                   # latent socioeconomic status
-D <- rbinom(n, 1, pnorm(2 * Z))                 # regular exercise
-P <- rbinom(n, 1, pnorm(-1 + Z))                # vitamin supplements
-Y <- rbinom(n, 1, pnorm(-2 - 0.43 * D + 4 * Z)) # heart disease
+ses  <- runif(n, 0, 1)                                  # socioeconomic status
+phy  <- rbinom(n, size = 1, prob = pnorm(2 * ses))      # regular exercise
+diet <- rbinom(n, size = 1, prob = pnorm(-1 + ses))     # vitamin supplements
+HD   <- rbinom(n, size = 1, prob = pnorm(-2 + -0.4 * phy + 4 * ses))
 
-sim <- data.frame(Y = Y, D = D, P = P, Z = Z)
-round(c(exercise = mean(D), vitamins = mean(P), heart_disease = mean(Y)), 3)
+health_data <- data.frame(
+  SES                 = ses,
+  Physical_Activity   = phy,
+  Dietary_Supplements = diet,
+  Heart_Disease       = HD
+)
+
+round(c(exercise = mean(phy), vitamins = mean(diet),
+        heart_disease = mean(HD)), 3)
 ```
 
 Because this is a simulation we can compute the answer an investigator could
-not: the coefficient on `D` in the *long* regression that includes `Z`.
+not: the coefficient on exercise in the *long* regression that includes `SES`.
 
 ```{r truth}
-truth <- coef(lm(Y ~ D + P + Z, data = sim))[["D"]]
+truth <- coef(lm(Heart_Disease ~ Physical_Activity + Dietary_Supplements + SES,
+                 data = health_data))[["Physical_Activity"]]
 round(truth, 4)
 ```
 
 Roughly a 10-percentage-point reduction in the probability of heart disease.
-Everything below is an attempt to get near that number without using `Z`.
+Everything below is an attempt to get near that number without using `SES`.
 
 ## Fitting
 
 ```{r fit}
 fit <- placebo_lm(
-  data      = sim,
-  outcome   = "Y",
-  treatment = "D",
-  placebo   = "P",
+  data      = health_data,
+  outcome   = "Heart_Disease",
+  treatment = "Physical_Activity",
+  placebo   = "Dietary_Supplements",
   structure = "placebo_treatment"
 )
 
@@ -89,8 +99,8 @@ The other is relative confounding, and it comes in two forms.
 the bias in the vitamins–heart-disease relationship. Conventional
 difference-in-differences is exactly `m = 1`.
 
-`k` is the same idea after correcting for the fact that `D` and `P` are on
-different scales, related by `m = k * SF` where `SF` is the scale factor
+`k` is the same idea after correcting for the fact that exercise and vitamin
+use are on different scales, related by `m = k * SF` where `SF` is the scale factor
 reported above. Reasoning about `k` asks: *is exercise more or less confounded
 with heart disease than vitamin use is?*
 
@@ -110,8 +120,12 @@ plm_benchmarks(fit)
 
 Assuming away unobserved confounding gives roughly **+17 percentage points** —
 exercise appears to *cause* heart disease, which is not credible and is a good
-illustration of what confounding does here. Both placebo-adjusted benchmarks
-land far closer to the truth of −10pp, though neither hits it.
+illustration of what confounding does here. The two placebo-adjusted benchmarks
+give about **+1pp** (conventional DID, which here corresponds to `k = 0.85`) and
+**−1pp** (equiconfounding after rescaling). Both are far closer to the truth of
+about −10pp than assuming no unobserved confounding, though neither is a good
+approximation to it — which is the paper's point: these are still *point*
+assumptions.
 
 ## Reasoning about a range
 
@@ -152,12 +166,14 @@ is exactly the kind of statement the method is designed to produce.
 Since this is a simulation, we can also check what the true `k` was:
 
 ```{r truek}
-oracle <- coef(lm(Y ~ D + P + Z, data = sim))[["P"]]
-plm_solve(fit, target = truth, imperfection = oracle)
+plm_solve(fit, target = truth, imperfection = 0)
 ```
 
-An investigator who was willing to entertain that value in their range would
-have covered the truth.
+The paper reports this as **`k = 1.45`**: the confounding between vitamin use
+and heart disease would have to be about 1.45 times as severe as that between
+exercise and heart disease. An investigator willing to entertain that value in
+their range would have covered the truth — and the range argued for above,
+`0 ≤ k ≤ 3`, does.
 
 ## Two parameters at once
 

@@ -12,7 +12,7 @@ plm_structures
 }
 \description{
 The registry of causal structures supported by \code{\link[=placebo_lm]{placebo_lm()}}, transcribing
-Tables 1 and 2 of Rohde and Hazlett. Use \code{\link[=plm_structure_table]{plm_structure_table()}} for a
+Tables 2 and 3 of Rohde and Hazlett. Use \code{\link[=plm_structure_table]{plm_structure_table()}} for a
 human-readable summary.
 }
 \keyword{internal}

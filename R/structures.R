@@ -1,7 +1,7 @@
 # Structure registry -----------------------------------------------------------
 #
-# One entry per causal structure supported by the package, transcribing Tables 1
-# and 2 of Rohde and Hazlett. Those tables have columns
+# One entry per causal structure supported by the package, transcribing Tables 2
+# and 3 of Rohde and Hazlett. Those tables have columns
 #
 #   Placebo Type | Short Regression(s) | Parameters | Target Coefficient Expression
 #
@@ -11,7 +11,7 @@
 #
 # Each entry supplies:
 #   label        human-readable name, as used in the paper
-#   paper_ref    which row(s) of Tables 1-2 it encodes
+#   paper_ref    which row(s) of Tables 2-3 it encodes
 #   describe     one-line statement of the assumed causal structure
 #   regressions  function(v) -> named list of formulas ("target" and, when the
 #                sensitivity coefficient comes from a second regression, "sens")
@@ -30,17 +30,17 @@
 #'
 #' @description
 #' The registry of causal structures supported by [placebo_lm()], transcribing
-#' Tables 1 and 2 of Rohde and Hazlett. Use [plm_structure_table()] for a
+#' Tables 2 and 3 of Rohde and Hazlett. Use [plm_structure_table()] for a
 #' human-readable summary.
 #'
 #' @format A named list. See the package source for the fields of each entry.
 #' @keywords internal
 plm_structures <- list(
 
-  # --- Table 1[a], [b] -------------------------------------------------------
+  # --- Table 2[a], [b] -------------------------------------------------------
   placebo_outcome = list(
     label     = "Placebo Outcome",
-    paper_ref = "Table 1[a], [b]",
+    paper_ref = "Table 2[a], [b]",
     describe  = paste(
       "P is a placebo outcome: it shares confounders with Y but is not caused",
       "by D (perfect placebo) or is caused by D only weakly (imperfect)."
@@ -55,10 +55,10 @@ plm_structures <- list(
     sens_expr   = function(v) bquote(beta[.(v$P) * "~" * .(v$D) * "|Z,X"])
   ),
 
-  # --- Table 1[a], [c] -------------------------------------------------------
+  # --- Table 2[a], [c] -------------------------------------------------------
   placebo_treatment = list(
     label     = "Placebo Treatment",
-    paper_ref = "Table 1[a], [c]",
+    paper_ref = "Table 2[a], [c]",
     describe  = paste(
       "P is a placebo treatment: it shares confounders with D but does not",
       "cause Y (perfect placebo) or causes Y only weakly (imperfect).",
@@ -73,10 +73,10 @@ plm_structures <- list(
     sens_expr   = function(v) bquote(beta[.(v$Y) * "~" * .(v$P) * "|" * .(v$D) * ",Z,X"])
   ),
 
-  # --- Table 1[c] ------------------------------------------------------------
+  # --- Table 2[c] ------------------------------------------------------------
   observed_confounder_1 = list(
     label     = "Observed Confounder 1",
-    paper_ref = "Table 1[c]",
+    paper_ref = "Table 2[c]",
     describe  = paste(
       "P causes Y and shares confounders with D. Read as a placebo outcome,",
       "with P included in the outcome regression so that it blocks the",
@@ -92,10 +92,10 @@ plm_structures <- list(
     sens_expr   = function(v) bquote(beta[.(v$P) * "~" * .(v$D) * "|Z,X"])
   ),
 
-  # --- Table 2[e], [f] -------------------------------------------------------
+  # --- Table 3[e], [f] -------------------------------------------------------
   observed_confounder_2 = list(
     label     = "Observed Confounder 2",
-    paper_ref = "Table 2[e], [f]",
+    paper_ref = "Table 3[e], [f]",
     describe  = paste(
       "P causes D (P is an observed confounder of the D-Y relationship).",
       "The sensitivity parameter is the residual P-D association."
@@ -110,10 +110,10 @@ plm_structures <- list(
     sens_expr   = function(v) bquote(beta[.(v$D) * "~" * .(v$P) * "|Z,X"])
   ),
 
-  # --- Table 2[g], [h] -------------------------------------------------------
+  # --- Table 3[g], [h] -------------------------------------------------------
   post_outcome = list(
     label     = "Post-Outcome",
-    paper_ref = "Table 2[g], [h]",
+    paper_ref = "Table 3[g], [h]",
     describe  = paste(
       "P is a descendant of Y (reverse causation). The sensitivity parameter",
       "is the residual Y-P association."
@@ -167,7 +167,7 @@ plm_structures <- list(
 #'
 #' @description
 #' Returns a data frame describing each causal structure that [placebo_lm()]
-#' supports, with the corresponding row of Tables 1 and 2 of Rohde and Hazlett
+#' supports, with the corresponding row of Tables 2 and 3 of Rohde and Hazlett
 #' and the name of the structure's sensitivity parameter.
 #'
 #' @return A data frame with columns `structure`, `label`, `paper_ref`,

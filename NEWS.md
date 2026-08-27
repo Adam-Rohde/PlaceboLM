@@ -46,14 +46,40 @@ a regression test (`test-legacy-equivalence.R`).
 * Bootstrap parallelism falls back correctly on Windows.
 * Double-placebo support remains out of scope (Appendix B of the paper).
 
-## Removed
+## Analytic and cluster-robust inference
 
-`placeboLM()`, `estimate_regs()`, `estimate_PLM()`, `boot_funk()`,
-`bootstrap_regs()`, `placeboLM_point_estimate()`, `placeboLM_table()`,
-`placeboLM_contour_plot()`, `placeboLM_line_plot()`,
-`beta_expression_convert()`.
+Following the revised paper, the `m`-parameterized adjustment is exactly an
+ordinary least squares fit on the pseudo-outcome `Y - m * P`, by
+Frisch-Waugh-Lovell. Conditional on the postulated sensitivity parameters, the
+standard error of the adjusted estimate is therefore the ordinary standard
+error of the treatment coefficient in that regression, under any variance
+estimator.
+
+* `plm_regression()` returns that fit, so it can be handed to `sandwich`,
+  `lmtest`, or any other variance machinery — which is how cluster-robust
+  inference is now available.
+* `plm_analytic()` wraps it, returning the estimate, standard error, and
+  interval in closed form, with an optional `vcov` argument.
+
+When reasoning with `k` the scale factor is itself estimated; the paper
+recommends the nonparametric bootstrap there, which remains the default
+(`plm_grid()`).
+
+## Deprecated, not removed
+
+The pre-0.2.0 interface — `placeboLM()`, `estimate_regs()`, `estimate_PLM()`,
+`boot_funk()`, `bootstrap_regs()`, `placeboLM_point_estimate()`,
+`placeboLM_table()`, `placeboLM_contour_plot()`, `placeboLM_line_plot()`,
+`beta_expression_convert()` — is retained in `R/legacy.R` with its arithmetic
+unchanged. The appendix of the paper prints example code written against it and
+directs readers to install this package from GitHub, so that code must continue
+to run. Each entry point warns once per session. `test-legacy-api.R` runs the
+paper's published code and checks it reproduces the published figures.
+
+Double placebos raise an error in the legacy interface too.
 
 ## Dependencies
 
-Dropped `boot`, `tidyr`, `stringr`, and `knitr` from `Imports`; the bootstrap is
-implemented directly against `parallel`.
+Dropped `knitr` from `Imports`. `boot`, `stringr`, and `tidyr` are retained
+solely for the deprecated interface; the new code paths use only `stats`,
+`graphics`, and `parallel`.
