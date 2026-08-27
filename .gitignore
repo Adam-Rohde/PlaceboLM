@@ -3,3 +3,15 @@
 .Rdata
 .httr-oauth
 .DS_Store
+
+# R package build artefacts
+*.Rcheck/
+*.tar.gz
+*.tgz
+inst/doc/
+doc/
+Meta/
+vignettes/*.html
+vignettes/*.R
+vignettes/*_files/
+.Rproj.user/

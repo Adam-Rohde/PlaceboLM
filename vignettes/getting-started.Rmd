@@ -1,161 +1,181 @@
 ---
-title: "Getting Started: The LaLonde Job-Training Example"
+title: "Getting Started"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Getting Started: The LaLonde Job-Training Example}
+  %\VignetteIndexEntry{Getting Started}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(
-  collapse  = TRUE,
-  comment   = "#>",
-  fig.width = 7,
-  fig.height = 5
-)
-set.seed(0)
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
+                      fig.width = 7, fig.height = 5)
 ```
 
-## Background
+This vignette works through the placebo-treatment simulation of Section 3.1 of
+Rohde and Hazlett, which is small enough to run here and has a known right
+answer to check against.
 
-This vignette replicates the LaLonde (1986) job-training analysis from
-Rohde and Hazlett (2025). The goal is to estimate the effect of a job-training
-programme (`treat`) on 1978 earnings (`re78`), using 1974 pre-treatment
-earnings (`re74`) as a *placebo outcome*. The data come from the PSID
-comparison sample.
+## The problem
 
-The core insight of the PlaceboLM framework is that pre-treatment outcomes
-are imperfect placebos. They share unobserved confounders with the
-treatment-outcome relationship, but the confounding may not be *equal* across
-the two periods. The sensitivity parameters `k` and `coef_P_D_given_XZ`
-let us reason about how far the equiconfounding assumption can be relaxed
-before the qualitative conclusion changes.
+We want the effect of regular exercise (`D`) on heart disease (`Y`). We worry
+that socioeconomic status (`Z`) confounds it: it plausibly affects both the
+ability to exercise and, through diet, healthcare access, and stress, the risk
+of heart disease. We do not observe `Z`.
 
-## Data
+We do observe whether people take supplemental vitamins (`P`). Vitamin use is
+plausibly driven by the same health-seeking behaviour and resources that drive
+exercise, but we expect it to have little or no effect on heart disease. That
+makes it a **placebo treatment**: a variable that shares confounders with the
+real treatment but does not itself cause the outcome.
 
-```{r data}
+The idea of the method is to use the confounding we *can* see — in the
+vitamins–heart-disease relationship — to reason about the confounding we
+cannot, in the exercise–heart-disease relationship.
+
+## Simulating the data
+
+```{r dgp}
 library(PlaceboLM)
 
-data(lalonde, package = "qte")
-lalonde_psid <- lalonde.psid
+set.seed(2023)
+n <- 5000
 
-head(lalonde_psid[, c("re78", "treat", "re74",
-                       "age", "education", "black",
-                       "hispanic", "married", "nodegree")])
+Z <- runif(n)                                   # latent socioeconomic status
+D <- rbinom(n, 1, pnorm(2 * Z))                 # regular exercise
+P <- rbinom(n, 1, pnorm(-1 + Z))                # vitamin supplements
+Y <- rbinom(n, 1, pnorm(-2 - 0.43 * D + 4 * Z)) # heart disease
+
+sim <- data.frame(Y = Y, D = D, P = P, Z = Z)
+round(c(exercise = mean(D), vitamins = mean(P), heart_disease = mean(Y)), 3)
 ```
 
-## Setting up the placebo model
+Because this is a simulation we can compute the answer an investigator could
+not: the coefficient on `D` in the *long* regression that includes `Z`.
 
-We specify:
+```{r truth}
+truth <- coef(lm(Y ~ D + P + Z, data = sim))[["D"]]
+round(truth, 4)
+```
 
-- **Outcome** `re78`: 1978 earnings (post-treatment).
-- **Treatment** `treat`: indicator for assignment to the job-training programme.
-- **Placebo outcome** `re74`: 1974 earnings (pre-treatment, before the programme).
-- **Causal structure** `DP = ""`, `PY = ""`: we assume the pre-treatment
-  outcome has no direct relationship with either the treatment or the
-  post-treatment outcome beyond shared confounders.  This is the standard
-  parallel-trends-style assumption.
-- **Partial-identification parameters**: `k` ∈ [−2, 2] scales the
-  confounding in `re78` relative to the confounding in `re74`; `coef_P_D_given_XZ`
-  is the residual association between `re74` and `treat` after removing the
-  influence of all observed *and* unobserved confounders.
+Roughly a 10-percentage-point reduction in the probability of heart disease.
+Everything below is an attempt to get near that number without using `Z`.
 
-```{r setup-plm}
-plm <- placeboLM(
-  data                  = lalonde_psid,
-  outcome               = "re78",
-  treatment             = "treat",
-  placebo_outcome       = "re74",
-  observed_covariates   = c("age", "education", "black",
-                             "hispanic", "married", "nodegree"),
-  partialIDparam_minmax = list(
-    k                   = c(-2, 2),
-    coef_P_D_given_XZ   = c(-15000, 15000)
-  )
+## Fitting
+
+```{r fit}
+fit <- placebo_lm(
+  data      = sim,
+  outcome   = "Y",
+  treatment = "D",
+  placebo   = "P",
+  structure = "placebo_treatment"
 )
+
+fit
 ```
 
-The printed messages confirm the placebo type and the two regression
-specifications that will be used.
+The printout names the two sensitivity parameters the analysis rests on.
+`beta_Y_P_given_DZX` is the **placebo imperfection**: the effect vitamins would
+still have on heart disease after adjusting for exercise and for the unobserved
+confounders. We are willing to argue this is zero — that is the substantive
+claim that vitamins do not prevent heart disease.
 
-## Summary table
+The other is relative confounding, and it comes in two forms.
 
-`placeboLM_table()` always reports three benchmark estimates first:
+## Two ways to talk about relative confounding
 
-| Row | Meaning |
-|---|---|
-| **No Unobserved Confounding** | OLS estimate; assumes away all unobserved confounding (`k = 0`). |
-| **DID** | The value of `k` at which the estimate equals a difference-in-differences benchmark; equiconfounding on the observed scale. |
-| **Perfect Placebo (k=1)** | Assumes unobserved confounding is *identical* (on the regression scale) across the two periods. |
+`m` is the raw ratio of the bias in the exercise–heart-disease relationship to
+the bias in the vitamins–heart-disease relationship. Conventional
+difference-in-differences is exactly `m = 1`.
 
-Below these, a grid of estimates at the 25th, 50th, and 75th percentiles of
-each parameter range is printed.
+`k` is the same idea after correcting for the fact that `D` and `P` are on
+different scales, related by `m = k * SF` where `SF` is the scale factor
+reported above. Reasoning about `k` asks: *is exercise more or less confounded
+with heart disease than vitamin use is?*
 
-```{r table, cache = TRUE}
-placeboLM_table(
-  plm,
-  n_boot   = 200,
-  ptiles   = c(0.25, 0.5, 0.75),
-  alpha    = 0.05,
-  decimals = 0
-)
+Supply whichever you prefer:
+
+```{r params}
+plm_estimate(fit, k = 0)   # no unobserved confounding at all
+plm_estimate(fit, m = 1)   # conventional difference-in-differences
+plm_estimate(fit, k = 1)   # equal confounding, after rescaling
 ```
 
-**Reading the table.** The SOO estimate is around −5 900, suggesting a
-negative effect if we assume no unobserved confounding — implausible given
-the non-random assignment. The DID benchmark (equiconfounding) produces an
-estimate near 1 700, consistent with the experimental benchmark of roughly
-1 800. The perfect-placebo estimate (`k = 1`) is around 3 100.
+These three are worth having together, so they have their own function:
 
-## Contour plot
-
-The contour plot shows the estimate as a continuous function of both
-sensitivity parameters simultaneously. The zero contour (red) is the
-**tipping line**: parameter combinations above (or below) it are the ones
-that would change the sign of the estimated effect.
-
-```{r contour, cache = TRUE}
-placeboLM_contour_plot(plm, gran = 60, decimals = 0)
+```{r benchmarks}
+plm_benchmarks(fit)
 ```
 
-The green square marks the DID benchmark, the blue triangle the perfect-placebo
-benchmark (`k = 1`, `coef_P_D_given_XZ = 0`), and the navy diamond the SOO
-estimate. The DID benchmark lies well above the zero contour, indicating that
-equiconfounding is sufficient to recover a positive effect.
+Assuming away unobserved confounding gives roughly **+17 percentage points** —
+exercise appears to *cause* heart disease, which is not credible and is a good
+illustration of what confounding does here. Both placebo-adjusted benchmarks
+land far closer to the truth of −10pp, though neither hits it.
 
-## Line plots
+## Reasoning about a range
 
-Line plots slice through the two-dimensional parameter space, fixing
-`coef_P_D_given_XZ` at three levels (0th, 50th, and 100th percentiles of its
-range) and varying `k` along the x-axis. Shaded bands are 95 % bootstrap
-confidence intervals.
+The point of the method is that we do not have to commit to a single value.
+The paper's reasoning for this example runs roughly: the biases plausibly share
+a sign, so `k > 0`; exercise probably depends on socioeconomic status *more*
+strongly than cheap vitamin supplements do, so probably `k > 1`; but it is hard
+to argue for `k > 3`.
 
-```{r line, cache = TRUE}
-placeboLM_line_plot(
-  plm,
-  bootstrap   = TRUE,
-  n_boot      = 200,
-  ptiles      = c(0, 0.5, 1),
-  focus_param = "k",
-  ptile_param = "coef_P_D_given_XZ",
-  gran        = 15,
-  alpha       = 0.05,
-  decimals    = 0
-)
+That range of assumptions maps to a range of estimates:
+
+```{r bounds}
+plm_bounds(fit, k = c(0, 3), n_boot = 200)
 ```
 
-When `coef_P_D_given_XZ = 0` (the middle panel, and the panel where benchmark
-points are drawn), the estimate is positive and statistically distinguishable
-from zero for values of `k` near the DID benchmark. The zero-crossing of the
-estimate line — the robustness value for `k` — gives the minimum departure from
-equiconfounding required to overturn the positive conclusion.
+The truth is inside it. Note what this bought us: we did not have to defend a
+point assumption, only an interval, and the interval was wide enough to be
+defensible.
 
-## References
+```{r line, fig.alt = "Adjusted estimate against k"}
+plm_line_plot(fit, k = c(0, 3), n_boot = 200)
+```
 
-LaLonde, R. J. (1986). Evaluating the econometric evaluations of training
-programmes with experimental data. *American Economic Review*, 76(4), 604–620.
+## Where does the conclusion flip?
 
-Rohde, A. and Hazlett, C. (2025). Causal progress with imperfect placebo
-treatments and outcomes. *Journal of the Royal Statistical Society: Series A*.
-<https://doi.org/10.1093/jrsssa/qnaf001>
+The inverse question is often the more useful one. Rather than asking what
+estimate a given `k` implies, ask which `k` would overturn a conclusion:
+
+```{r solve}
+plm_solve(fit, target = 0)
+```
+
+Anyone who wants to claim exercise does *not* reduce heart disease has to argue
+for a `k` below that value — that exercise is *less* confounded with heart
+disease than vitamin use is. In this setting that is a hard case to make, which
+is exactly the kind of statement the method is designed to produce.
+
+Since this is a simulation, we can also check what the true `k` was:
+
+```{r truek}
+oracle <- coef(lm(Y ~ D + P + Z, data = sim))[["P"]]
+plm_solve(fit, target = truth, imperfection = oracle)
+```
+
+An investigator who was willing to entertain that value in their range would
+have covered the truth.
+
+## Two parameters at once
+
+If the placebo is not perfect, both parameters vary, and the contour plot shows
+the whole surface. The red contour is the set of assumptions at which the sign
+of the estimate flips.
+
+```{r contour, fig.alt = "Contour of the adjusted estimate"}
+plm_contour_plot(fit, k = c(0, 3))
+```
+
+## Where to go next
+
+* `vignette("structures")` — the five causal structures the package supports,
+  and how to choose between them.
+* `vignette("applications")` — the paper's two empirical applications.
+
+## Reference
+
+Rohde, A. and Hazlett, C. Causal progress with imperfect placebo treatments and
+outcomes.

@@ -1,23 +1,30 @@
 Package: PlaceboLM
 Title: Causal Progress with Imperfect Placebos Using Linear Models
-Version: 0.1.0
+Version: 0.2.0
 Authors@R:
-    person("Adam", "Rohde", , "adamrohde@ucla.edu", role = c("aut", "cre"),
-           comment = c(ORCID = "0000-0002-1825-1234"))
-Description: Implements the partial-identification framework of Rohde and
-    Hazlett (2025) for making causal progress with imperfect placebo variables.
-    Given a placebo outcome or placebo treatment that shares confounders with
-    the treatment-outcome relationship of interest, the package allows users to
-    specify ranges of sensitivity parameters (a confounding ratio k and a
-    residual placebo association) and produces estimates, bootstrap confidence
-    intervals, summary tables, contour plots, and line plots over the
-    parameter space. Special cases include selection-on-observables (k = 0)
-    and the difference-in-differences benchmark. See Rohde and Hazlett (2025)
-    <doi:10.1093/jrsssa/qnaf001>.
+    person("Adam", "Rohde", , "adamrohde@ucla.edu", role = c("aut", "cre"))
+Description: Partial identification of causal effects using imperfect placebo
+    variables, implementing the omitted-variable-bias framework of Rohde and
+    Hazlett. Given a placebo outcome or placebo treatment sharing unobserved
+    confounders with the treatment-outcome relationship of interest, users
+    postulate ranges for two sensitivity parameters -- relative confounding
+    (either the raw bias ratio 'm' or its scale-free counterpart 'k') and the
+    degree of placebo imperfection -- and obtain the corresponding range of
+    defensible effect estimates. Conventional difference-in-differences is
+    recovered as the point assumption m = 1, so the framework provides a
+    reasoned relaxation of parallel trends. Supports five causal structures,
+    bootstrap inference, bounds over assumption ranges, tipping-point
+    calculation, and contour and line visualisations.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.3.9000
+RoxygenNote: 7.3.1
+Depends:
+    R (>= 3.5.0)
+Imports:
+    graphics,
+    parallel,
+    stats
 Suggests:
     testthat (>= 3.0.0),
     knitr,
@@ -27,8 +34,3 @@ Config/testthat/edition: 3
 VignetteBuilder: knitr
 URL: https://github.com/Adam-Rohde/PlaceboLM
 BugReports: https://github.com/Adam-Rohde/PlaceboLM/issues
-Imports:
-    boot,
-    graphics,
-    parallel,
-    stats

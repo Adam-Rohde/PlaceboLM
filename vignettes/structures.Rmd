@@ -1,0 +1,172 @@
+---
+title: "Choosing a Causal Structure"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Choosing a Causal Structure}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
+                      fig.width = 7, fig.height = 5)
+```
+
+```{r lib}
+library(PlaceboLM)
+```
+
+The algebra behind this package is a property of linear regression and applies
+to any pair of regressions. What it *means* depends on the causal structure you
+are willing to assume. That structure determines which regressions to run,
+which coefficient is the sensitivity parameter, and how to interpret relative
+confounding.
+
+`structure` selects among the graphs in Tables 1 and 2 of Rohde and Hazlett:
+
+```{r table}
+plm_structure_table()[, c("structure", "paper_ref", "sens_param")]
+```
+
+## A common data-generating process
+
+Throughout, `U` is an unobserved confounder shared by the treatment, the
+placebo, and the outcome; `X` is an observed covariate. The true effect of `D`
+on `Y` is 1. Because `U` is in the data frame we can compute each structure's
+*oracle* sensitivity value — the number an investigator would have to postulate
+to recover the truth.
+
+```{r dgp}
+set.seed(20240101)
+n <- 4000
+
+U <- rnorm(n); X <- rnorm(n)
+D <- X + U + rnorm(n)
+P <- X + U + rnorm(n)
+Y <- D + X + U + rnorm(n)
+
+dat <- data.frame(Y = Y, D = D, P = P, X = X, U = U)
+```
+
+## Placebo outcome
+
+`P` shares confounders with `Y` but is not caused by `D`. The canonical case is
+a pre-treatment measure of the outcome, which is how difference-in-differences
+fits into this framework.
+
+```{r po}
+po <- placebo_lm(dat, "Y", "D", "P", covariates = "X",
+                 structure = "placebo_outcome")
+po$formulas
+```
+
+The sensitivity parameter is the residual `P`–`D` association: how much the
+treatment still moves the placebo once the unobserved confounders are
+accounted for. Zero means a perfect placebo. Here is the oracle value and the
+estimate it produces:
+
+```{r po-oracle}
+oracle_po <- coef(lm(P ~ D + X + U, data = dat))[["D"]]
+c(oracle       = oracle_po,
+  adjusted     = plm_estimate(po, k = 1, imperfection = oracle_po),
+  unadjusted   = plm_estimate(po, k = 0))
+```
+
+The adjusted estimate recovers the true effect of 1; assuming no unobserved
+confounding does not.
+
+## Placebo treatment
+
+`P` shares confounders with `D` but does not cause `Y`. Both go into a single
+regression, and the sensitivity parameter is the residual `P`–`Y` association.
+
+This structure additionally requires that `P` is not a descendant of `D` and
+`D` is not a descendant of `P`, and that each is a good or neutral control for
+the other. If you are unsure, draw the graph.
+
+```{r pt}
+pt <- placebo_lm(dat, "Y", "D", "P", covariates = "X",
+                 structure = "placebo_treatment")
+pt$formulas
+
+oracle_pt <- coef(lm(Y ~ D + P + X + U, data = dat))[["P"]]
+c(oracle   = oracle_pt,
+  adjusted = plm_estimate(pt, k = 1, imperfection = oracle_pt))
+```
+
+## Observed confounder 1
+
+`P` causes `Y` and shares confounders with `D`. You could treat `P` as a
+placebo outcome, but then the confounding path `D <- Z -> P -> Y` appears in
+both the numerator and denominator of `k`, which makes it hard to interpret.
+The fix is to put `P` into the outcome regression, where it blocks that path.
+
+```{r oc1}
+oc1 <- placebo_lm(dat, "Y", "D", "P", covariates = "X",
+                  structure = "observed_confounder_1")
+oc1$formulas
+```
+
+## Observed confounder 2
+
+`P` causes `D`. The sensitivity parameter is the residual `D`–`P` association.
+
+```{r oc2}
+oc2 <- placebo_lm(dat, "Y", "D", "P", covariates = "X",
+                  structure = "observed_confounder_2")
+oc2$formulas
+```
+
+## Post-outcome
+
+`P` is a descendant of `Y` — reverse causation. This is the structure that fits
+classical measurement-error settings, where the placebo is a noisy downstream
+reading of the outcome.
+
+```{r po2}
+pox <- placebo_lm(dat, "Y", "D", "P", covariates = "X",
+                  structure = "post_outcome")
+pox$formulas
+```
+
+## Mediators are not supported
+
+If `P` sits on a causal path from `D` to `Y`, this package will refuse to fit:
+
+```{r mediator, error = TRUE}
+placebo_lm(dat, "Y", "D", "P", structure = "mediator")
+```
+
+This is deliberate. The paper is explicit that in the mediator case "the
+placebo approach becomes very complicated, and we do not recommend our
+approach." Returning a number here would give the appearance of an answer the
+method does not support.
+
+## Triangulating across structures
+
+When a placebo can be read in more than one way, fitting both and comparing is
+informative — the paper does exactly this in its NSW analysis using two
+different placebo years. The scale factors differ, so `m` is not comparable
+across them, but `k` is:
+
+```{r compare}
+fits <- list(`placebo outcome`       = po,
+             `observed confounder 1` = oc1)
+
+data.frame(
+  structure = names(fits),
+  SF        = sapply(fits, `[[`, "SF"),
+  at_k_1    = sapply(fits, plm_estimate, k = 1),
+  tipping_k = sapply(fits, function(f) plm_solve(f, 0)$k),
+  row.names = NULL
+)
+```
+
+Where ranges of `k` that you can defend for each reading overlap, the
+intersection of the implied effect ranges is a tighter — and still
+defensible — conclusion than either alone.
+
+## Reference
+
+Rohde, A. and Hazlett, C. Causal progress with imperfect placebo treatments and
+outcomes.

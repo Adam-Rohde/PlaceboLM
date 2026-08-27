@@ -1,0 +1,193 @@
+---
+title: "The Paper's Empirical Applications"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{The Paper's Empirical Applications}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
+                      fig.width = 7, fig.height = 5)
+has_nsw  <- requireNamespace("qte", quietly = TRUE)
+```
+
+```{r lib}
+library(PlaceboLM)
+```
+
+This vignette reproduces the two empirical applications in Sections 3.2 and 3.3
+of Rohde and Hazlett. Both need data that is not bundled with the package;
+`data-raw/` contains scripts that fetch and prepare it. Where the data is
+absent the code is shown but not run, and the paper's published figures are
+quoted so you can check your own run against them.
+
+---
+
+# 1. Job training and earnings (NSW)
+
+The National Supported Work Demonstration randomly assigned disadvantaged
+workers to a job-training programme. The experimental benchmark — the number a
+good observational method should recover — is a **\$1,794** increase in 1978
+earnings, or **\$1,671** once observed covariates are included.
+
+The analysis uses the *non-experimental* comparison sample, in which the
+randomised controls are replaced by respondents from the PSID. Regression on
+observables famously gives a large negative estimate on this dataset.
+
+The placebo outcome is **1975 earnings** (`re75`) — a pre-treatment measure of
+the outcome, which the treatment cannot have affected. So the placebo
+imperfection is credibly zero, and the whole argument reduces to reasoning
+about relative confounding.
+
+```{r nsw-fit, eval = has_nsw}
+data(lalonde, package = "qte")
+
+fit_nsw <- placebo_lm(
+  data       = lalonde.psid,
+  outcome    = "re78",
+  treatment  = "treat",
+  placebo    = "re75",
+  covariates = c("age", "education", "black", "hispanic",
+                 "married", "nodegree"),
+  structure  = "placebo_outcome"
+)
+
+plm_benchmarks(fit_nsw)
+```
+
+The paper reports, for this specification:
+
+| Quantity | Paper |
+|---|---|
+| Adjusting for observables (`k = 0`) | below −\$5,000 |
+| Conventional DID (`m = 1`) | **\$2,087** |
+| Equiconfounding after rescaling (`k = 1`) | **\$3,428** |
+| Scale factor `SF` | 1.167 |
+
+## Reasoning about `k`
+
+The paper's argument runs as follows. The confounding in the
+treatment–1978-earnings relationship should share a sign with the confounding
+in the treatment–1975-earnings relationship, so `k > 0`. Both are measures of
+the same person's income a few years apart, so we might start near `0.5 < k <
+1.5`. But people select into job training on the basis of *recent* income loss
+— the Ashenfelter dip — so confounding should be stronger closer to enrolment
+in 1975 than in 1978. That gives `0 < k < 1`, with the most weight on
+`0.5 < k < 1`.
+
+```{r nsw-bounds, eval = has_nsw}
+plm_bounds(fit_nsw, k = c(0.5, 1), n_boot = 500)
+```
+
+The paper reports this bound as **[−\$1,249, +\$3,428]**, which contains the
+experimental benchmark of \$1,671.
+
+## Backing out the true `k`
+
+Because an experimental benchmark exists here, we can invert the problem and
+ask what `k` actually held:
+
+```{r nsw-solve, eval = has_nsw}
+plm_solve(fit_nsw, target = 1671)
+```
+
+The paper reports **`k = 0.812`** — comfortably inside the `0.5 < k < 1` range
+that was argued for *ex ante*, which is the paper's main point about this
+application. It also notes that because incomes grew between 1975 and 1978
+(`SF = 1.167`), the corresponding raw bias ratio is `m = 0.948`. Conventional
+DID assumes `m = 1`, so it lands close to the benchmark here — but by
+coincidence of two offsetting violations, not because its assumption was
+defensible.
+
+```{r nsw-line, eval = has_nsw, fig.alt = "NSW line plot"}
+plm_line_plot(fit_nsw, k = c(0, 2), n_boot = 500)
+```
+
+## A deliberately badly scaled placebo
+
+The paper also uses 1975 *unemployment* — a binary variable — as a placebo for
+1978 earnings in dollars. The scale factor exceeds 40,000. This is the case
+that shows why the package carries both parameterizations: `m` is meaningless
+across such different scales, while `k` remains interpretable. The paper finds
+the true `k` here is 0.33.
+
+```{r nsw-u, eval = FALSE}
+fit_u <- placebo_lm(
+  data       = lalonde.psid,
+  outcome    = "re78",
+  treatment  = "treat",
+  placebo    = "u75",
+  covariates = c("age", "education", "black", "hispanic",
+                 "married", "nodegree"),
+  structure  = "placebo_outcome"
+)
+fit_u$SF                      # very large
+plm_bounds(fit_u, k = c(0, 1), n_boot = 500)
+```
+
+## Triangulation
+
+Repeating the analysis with 1974 earnings as the placebo gives
+**[−\$1,406, +\$3,115]**. Intersecting that with the 1975 result gives
+**[−\$1,249, +\$3,115]** — a tighter interval that still rests only on
+assumptions the investigator was willing to defend for each placebo
+separately.
+
+---
+
+# 2. Zika and birth rates in Brazil
+
+In 2015 the Brazilian state of Pernambuco saw high rates of Zika infection,
+while Rio Grande do Sul reported none. Treating the former as treated and the
+latter as control, the outcome is the municipality-level 2016 birth rate per
+1,000 people and the placebo outcome is the same measure in 2014. As with NSW,
+the placebo is pre-treatment, so its imperfection is credibly zero.
+
+```{r zika, eval = FALSE}
+# See data-raw/zika.R for acquisition from the Harvard Dataverse
+# (Amorim 2022, doi:10.7910/DVN/ENG0IY)
+zika <- readRDS("zika.rds")
+
+fit_zika <- placebo_lm(
+  data      = zika,
+  outcome   = "birth_rate_2016",
+  treatment = "treated",
+  placebo   = "birth_rate_2014",
+  structure = "placebo_outcome"
+)
+
+plm_benchmarks(fit_zika)
+plm_solve(fit_zika, target = 0)          # where the sign flips
+plm_line_plot(fit_zika, k = c(0, 2), n_boot = 500)
+```
+
+The paper reports:
+
+| Quantity | Paper |
+|---|---|
+| Naive difference in means | **+3.4** births per 1,000 |
+| DID (`m = 1`) and `k = 1` | **−1.2 to −1.3** |
+| Sign flips at | **`k ≈ 0.7`** |
+| Estimate at `k = 1.2` | **−2.0** |
+
+Here, unlike NSW, there is little reason to argue `k < 1`: selection into
+treatment was close in time to the post-treatment outcome. So `k > 1` is if
+anything the more plausible region, and over most of the *ex ante* plausible
+range the data are consistent with Zika having **reduced** births — the
+opposite sign to the naive comparison. Anyone arguing Zika did not reduce
+births has to defend `k < 0.7`.
+
+---
+
+## Reference
+
+Rohde, A. and Hazlett, C. Causal progress with imperfect placebo treatments and
+outcomes.
+
+Amorim, L. (2022). Replication Data for: Zika Epidemic and Birth Rates in
+Brazil. <https://doi.org/10.7910/DVN/ENG0IY>
+
+LaLonde, R. J. (1986). Evaluating the econometric evaluations of training
+programmes with experimental data. *American Economic Review*, 76(4), 604–620.
