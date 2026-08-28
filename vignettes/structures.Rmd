@@ -22,51 +22,6 @@ are willing to assume. That structure determines which regressions to run,
 which coefficient is the sensitivity parameter, and how to interpret relative
 confounding.
 
-## Two ways to say which structure you are in
-
-You can name the structure directly. It selects among the graphs in Tables 2
-and 3 of Rohde and Hazlett:
-
-```{r table}
-plm_structure_table()[, c("structure", "paper_ref", "sens_param")]
-```
-
-But names like `observed_confounder_1` and `observed_confounder_2` mean nothing
-without the paper open, and picking the wrong one produces a plausible number
-rather than an error. Usually it is better to state the causal assumptions and
-let the package work out which row of the taxonomy that is:
-
-```{r edges-demo, eval = FALSE}
-placebo_lm(dat, "Y", "D", "P", covariates = "X", edges = "P->D")
-#> Placebo role: Observed Confounder 2  (paper Table 3[e], [f])
-#>   Sensitivity parameter: beta_D_P_given_ZX
-```
-
-Edges are written between the *roles* — `D` (treatment), `P` (placebo), `Y`
-(outcome) — not your column names. The full mapping:
-
-```{r edge-table}
-plm_edge_table()
-```
-
-Two edge sets appear twice, and that ambiguity is genuine rather than a gap in
-the encoding. With no direct edges, `P` can be read as a placebo outcome or a
-placebo treatment. With `P->Y`, the paper explicitly gives two readings of the
-same graph (its Table 2[c]): an imperfect placebo treatment, or an observed
-confounder handled on the placebo-outcome side. In both cases `placebo_role`
-picks the reading, and omitting it is an error rather than a silent default:
-
-```{r ambiguous, eval = FALSE}
-placebo_lm(dat, "Y", "D", "P", covariates = "X", edges = "P->Y")
-#> Error: This edge set admits more than one reading, so `placebo_role` is required.
-#>   With P->Y, the paper gives two readings of this graph (its Table 2[c]):
-#>   an imperfect placebo TREATMENT, or an observed confounder handled on the
-#>   placebo OUTCOME side. Fitting both and comparing is legitimate.
-#>   Supply placebo_role = "outcome" or "treatment".
-```
-
-Once the data is in hand, later sections use this interface live.
-
 ## A common data-generating process
 
 Throughout, `U` is an unobserved confounder shared by the treatment, the
@@ -85,6 +40,42 @@ P <- X + U + rnorm(n)
 Y <- D + X + U + rnorm(n)
 
 dat <- data.frame(Y = Y, D = D, P = P, X = X, U = U)
+```
+
+## Two ways to say which structure you are in
+
+You can name the structure directly. It selects among the graphs in Tables 2
+and 3 of Rohde and Hazlett:
+
+```{r table}
+plm_structure_table()[, c("structure", "paper_ref", "sens_param")]
+```
+
+But names like `observed_confounder_1` and `observed_confounder_2` mean nothing
+without the paper open, and picking the wrong one produces a plausible number
+rather than an error. Usually it is better to state the causal assumptions and
+let the package work out which row of the taxonomy that is:
+
+```{r edges-demo}
+fit <- placebo_lm(dat, "Y", "D", "P", covariates = "X", edges = "P->D")
+```
+
+Edges are written between the *roles* — `D` (treatment), `P` (placebo), `Y`
+(outcome) — not your column names. The full mapping:
+
+```{r edge-table}
+plm_edge_table()
+```
+
+Two edge sets appear twice, and that ambiguity is genuine rather than a gap in
+the encoding. With no direct edges, `P` can be read as a placebo outcome or a
+placebo treatment. With `P->Y`, the paper explicitly gives two readings of the
+same graph (its Table 2[c]): an imperfect placebo treatment, or an observed
+confounder handled on the placebo-outcome side. In both cases `placebo_role`
+picks the reading, and omitting it is an error rather than a silent default:
+
+```{r ambiguous, error = TRUE}
+placebo_lm(dat, "Y", "D", "P", covariates = "X", edges = "P->Y")
 ```
 
 ## Placebo outcome

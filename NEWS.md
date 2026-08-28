@@ -1,5 +1,23 @@
 # PlaceboLM (development)
 
+## Vignettes
+
+Everything shipped now runs. The applications vignette (NSW and Zika) has been
+removed: its data comes from CRAN and the Harvard Dataverse, neither of which
+was reachable where the package was developed, so six of its eight chunks were
+never executed and its figures were quoted from the paper rather than computed.
+Shipping unexecuted analysis invites the assumption that it was checked.
+
+Removed with it: `data-raw/verify-paper-numbers.R` and `data-raw/zika.R`, which
+existed only to support that vignette, and `qte` from `Suggests`.
+
+The two remaining vignettes execute in full, and the two illustrative chunks in
+`structures.Rmd` that were `eval = FALSE` are now live -- they had been gated
+only because they appeared before the chunk creating their data.
+
+One practical consequence: `R CMD check` no longer needs
+`_R_CHECK_FORCE_SUGGESTS_=false` to pass, and the dependency NOTE is gone.
+
 ## Correctness and labelling
 
 * **`m = 1` is no longer labelled "DID" for every structure.** Difference-in-

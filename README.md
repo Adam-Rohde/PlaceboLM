@@ -46,13 +46,14 @@ devtools::install_github("Adam-Rohde/PlaceboLM")
 ```r
 library(PlaceboLM)
 
+# `earnings` here stands in for a panel where the placebo is a pre-treatment
+# measure of the outcome -- the setting difference-in-differences assumes.
 fit <- placebo_lm(
-  data       = lalonde.psid,
-  outcome    = "re78",         # 1978 earnings
-  treatment  = "treat",        # job training programme
-  placebo    = "re75",         # 1975 earnings: a pre-treatment placebo outcome
-  covariates = c("age", "education", "black", "hispanic",
-                 "married", "nodegree"),
+  data       = earnings,
+  outcome    = "re78",         # post-treatment outcome
+  treatment  = "treat",        # the programme
+  placebo    = "re75",         # pre-treatment outcome, used as the placebo
+  covariates = c("age", "education", "married", "nodegree"),
   structure  = "placebo_outcome"
 )
 ```
@@ -203,19 +204,7 @@ Zhang and Ding (2022) instead.
 ```r
 vignette("getting-started", package = "PlaceboLM")  # worked simulation
 vignette("structures",      package = "PlaceboLM")  # choosing a structure
-vignette("applications",    package = "PlaceboLM")  # NSW and Zika
 ```
-
-## Checking against the paper
-
-```
-Rscript data-raw/verify-paper-numbers.R
-```
-
-Compares the package against every figure published in the applications --
-scale factors, benchmark estimates, backed-out `k`, bounds and the triangulated
-intersection -- at the paper's own rounding. Needs `qte` for NSW, and the Zika
-extract described in `data-raw/zika.R`.
 
 ## Reproducing the paper
 

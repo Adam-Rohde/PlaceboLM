@@ -208,7 +208,6 @@ plm_contour_plot(fit, k = c(0, 3))
 
 * `vignette("structures")` — the five causal structures the package supports,
   and how to choose between them.
-* `vignette("applications")` — the paper's two empirical applications.
 
 ## Reference
 
