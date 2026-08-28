@@ -135,25 +135,53 @@ plm_population <- function(structure, n = 400000, seed = 987) {
 }
 
 
-# A clustered version of the placebo-outcome DGP: the unobserved confounder has
-# a cluster-level component, so units within a cluster are dependent. Used to
-# show that the i.i.d. bootstrap under-covers here.
-plm_dgp_clustered <- function(n_clust = 40, per = 20, seed = 1, beta_D = 2) {
+# Clustered variants of the placebo-outcome DGP.
+#
+# Whether clustering threatens inference here turns out to depend on WHERE the
+# dependence lives, because of the Moulton condition: a coefficient's variance
+# is inflated only when the regressor AND the residual are both cluster
+# correlated. Two cases are therefore generated.
+#
+#   shock = "confounder"
+#     All cluster structure sits in the unobserved confounder Z. The treatment
+#     inherits it, so the regressor is cluster correlated -- but the placebo
+#     adjustment exists precisely to remove Z, and it removes the dependence
+#     along with it. Measured on one draw, the ratio of clustered to classical
+#     standard errors falls from 1.66 before adjustment to 0.76 after.
+#
+#   shock = "outcome"
+#     Z still has a cluster component, so the treatment is cluster correlated,
+#     but Y also carries a separate cluster shock that P does not share. That
+#     shock survives the adjustment, both Moulton conditions hold, and the
+#     ratio stays high: 2.39 before adjustment, 1.84 after.
+#
+# In both cases the cluster shock is independent of D given Z, so the population
+# target remains the DGP effect.
+plm_dgp_clustered <- function(n_clust = 40, per = 20, seed = 1, beta_D = 2,
+                              shock = c("confounder", "outcome")) {
+  shock <- match.arg(shock)
   set.seed(seed)
   cl <- rep(seq_len(n_clust), each = per)
   n  <- length(cl)
-  Z  <- stats::rnorm(n_clust, sd = 1.2)[cl] + stats::rnorm(n, sd = 0.5)
-  X  <- stats::rnorm(n)
-  D  <- X + Z + stats::rnorm(n)
-  P  <- X + Z + stats::rnorm(n) + 0.3 * D
-  Y  <- beta_D * D + X + Z + stats::rnorm(n)
+
+  Z <- stats::rnorm(n_clust, sd = 1.2)[cl] + stats::rnorm(n, sd = 0.5)
+  X <- stats::rnorm(n)
+  u <- if (shock == "outcome") stats::rnorm(n_clust, sd = 1.5)[cl] else 0
+
+  D <- X + Z + stats::rnorm(n)
+  P <- X + Z + stats::rnorm(n) + 0.3 * D
+  Y <- beta_D * D + X + Z + u + stats::rnorm(n)
+
   data.frame(Y = Y, D = D, P = P, X = X, Z = Z, cl = factor(cl))
 }
 
-plm_population_clustered <- function(n_clust = 4000, per = 20, seed = 987) {
-  key <- paste("clustered", n_clust, per, seed, sep = "/")
+plm_population_clustered <- function(n_clust = 4000, per = 20, seed = 987,
+                                     shock = c("confounder", "outcome")) {
+  shock <- match.arg(shock)
+  key <- paste("clustered", shock, n_clust, per, seed, sep = "/")
   if (!is.null(.plm_pop_cache[[key]])) return(.plm_pop_cache[[key]])
-  d   <- plm_dgp_clustered(n_clust = n_clust, per = per, seed = seed)
+  d   <- plm_dgp_clustered(n_clust = n_clust, per = per, seed = seed,
+                           shock = shock)
   fit <- placebo_lm(d, "Y", "D", "P", covariates = "X",
                     structure = "placebo_outcome")
   out <- plm_true_params(fit, d)

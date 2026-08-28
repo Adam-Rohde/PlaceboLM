@@ -99,8 +99,22 @@ standard error rather than an arbitrary tolerance.
   narrower than those that resample it.
 * A placebo with little residual variation produces wider intervals, not falsely
   tight ones -- the failure mode the paper's volatility warning implies.
-* Clustered sampling makes the i.i.d. bootstrap under-cover, turning the
-  documented caveat into a demonstrated limit.
+* Clustered sampling: the effect on the bootstrap turns out to depend on *where*
+  the dependence lives, which is more informative than the blanket warning we
+  started with. By the Moulton argument a coefficient's variance is inflated
+  only when the regressor and the residual are both cluster correlated, and the
+  placebo adjustment removes the confounder -- so it can remove the dependence
+  along with it. Measured ratios of clustered to classical standard errors on
+  one draw:
+
+  | cluster shock lives in | naive (k = 0) | placebo-adjusted |
+  |---|---|---|
+  | the confounder Z | 1.66 | 0.76 |
+  | Y only, plus cluster-correlated D | 2.39 | 1.84 |
+
+  So the i.i.d. bootstrap is roughly calibrated in the first case and
+  under-covers in the second. Both are now tested, and the documentation says
+  which situation is which rather than warning indiscriminately.
 
 ## Statistical validation
 

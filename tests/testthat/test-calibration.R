@@ -203,24 +203,57 @@ test_that("a placebo with little residual variation gives wide, not falsely tigh
 })
 
 
-test_that("the i.i.d. bootstrap under-covers under clustered sampling", {
-  # The theory assumes i.i.d. sampling. This is a limit to document rather than
-  # a bug to fix, and it matters concretely: the Zika application uses
-  # municipality-level data where dependence is plausible.
+# --- Dependence -------------------------------------------------------------
+#
+# The theory assumes i.i.d. sampling, and the natural expectation is that
+# clustered data makes the bootstrap under-cover. That turns out to be true only
+# sometimes, and the condition is worth knowing: by the Moulton argument a
+# coefficient's variance is inflated only when the regressor AND the residual
+# are both cluster correlated. The placebo adjustment removes the confounder --
+# so if the cluster dependence lives entirely in that confounder, the adjustment
+# removes the dependence too.
+
+test_that("clustering in the confounder is absorbed by the adjustment", {
+  # All cluster structure sits in Z. The naive estimate is affected; the
+  # adjusted one is not, so the i.i.d. bootstrap remains roughly calibrated.
   skip_unless_slow()
-  pop <- plm_population_clustered()
+  pop <- plm_population_clustered(shock = "confounder")
   S <- 250
 
   hits <- vapply(seq_len(S), function(s) {
-    d   <- plm_dgp_clustered(n_clust = 40, per = 20, seed = 800000 + s)
+    d   <- plm_dgp_clustered(n_clust = 40, per = 20, seed = 800000 + s,
+                             shock = "confounder")
     fit <- placebo_lm(d, "Y", "D", "P", covariates = "X",
                       structure = "placebo_outcome")
     g <- plm_grid(fit, k = pop$k, imperfection = pop$imperfection,
                   n_boot = 250, cores = 1, engine = "matrix")
-    isTRUE(g$ci_lower <= pop$target_long &&
-           pop$target_long <= g$ci_upper)
+    isTRUE(g$ci_lower <= pop$target_long && pop$target_long <= g$ci_upper)
   }, logical(1))
 
-  # The claim under test: i.i.d. intervals are anti-conservative here.
+  # Not a failure of the bootstrap: there is no residual dependence left for it
+  # to miss. Coverage should be near nominal.
+  expect_near_nominal(mean(hits), S, mult = 4)
+})
+
+
+test_that("dependence that survives the adjustment does make the i.i.d. bootstrap under-cover", {
+  # Z still has a cluster component, so the treatment is cluster correlated, but
+  # Y carries a separate cluster shock that the placebo does not share and the
+  # adjustment cannot remove. Both Moulton conditions hold and the i.i.d.
+  # interval is too narrow.
+  skip_unless_slow()
+  pop <- plm_population_clustered(shock = "outcome")
+  S <- 250
+
+  hits <- vapply(seq_len(S), function(s) {
+    d   <- plm_dgp_clustered(n_clust = 40, per = 20, seed = 900000 + s,
+                             shock = "outcome")
+    fit <- placebo_lm(d, "Y", "D", "P", covariates = "X",
+                      structure = "placebo_outcome")
+    g <- plm_grid(fit, k = pop$k, imperfection = pop$imperfection,
+                  n_boot = 250, cores = 1, engine = "matrix")
+    isTRUE(g$ci_lower <= pop$target_long && pop$target_long <= g$ci_upper)
+  }, logical(1))
+
   expect_lt(mean(hits), 0.95 - 2 * cover_se(0.95, S))
 })
