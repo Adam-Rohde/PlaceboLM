@@ -12,7 +12,8 @@ plm_bounds(
   n_boot = 1000,
   alpha = 0.05,
   ci_type = c("percentile", "normal"),
-  cores = NULL
+  cores = NULL,
+  engine = c("lm", "matrix")
 )
 }
 \arguments{
@@ -39,6 +40,8 @@ standard errors are available.}
 
 \item{cores}{Integer. Cores for the bootstrap. Defaults to one less than
 detected, minimum 1.}
+
+\item{engine}{\code{"lm"} (default) or \code{"matrix"}; see \code{\link[=plm_grid]{plm_grid()}}.}
 }
 \value{
 A one-row data frame with columns \code{k_low}, \code{k_high}, \code{m_low},

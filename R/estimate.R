@@ -158,6 +158,7 @@ plm_benchmarks <- function(fit, imperfection = 0) {
 #'   standard errors are available.
 #' @param cores Integer. Cores for the bootstrap. Defaults to one less than
 #'   detected, minimum 1.
+#' @param engine `"lm"` (default) or `"matrix"`; see [plm_grid()].
 #'
 #' @section What the bootstrap columns are, and are not:
 #' Four distinct objects are easy to confuse here.
@@ -195,9 +196,10 @@ plm_benchmarks <- function(fit, imperfection = 0) {
 plm_bounds <- function(fit, k = NULL, m = NULL, imperfection = 0,
                        n_boot = 1000, alpha = 0.05,
                        ci_type = c("percentile", "normal"),
-                       cores = NULL) {
+                       cores = NULL, engine = c("lm", "matrix")) {
   .plm_check_fit(fit)
   ci_type <- match.arg(ci_type)
+  engine  <- match.arg(engine)
 
   supplied <- if (is.null(k)) m else k
   if (length(supplied) != 2L)
@@ -227,7 +229,8 @@ plm_bounds <- function(fit, k = NULL, m = NULL, imperfection = 0,
   )
 
   if (n_boot > 0) {
-    reps <- .plm_boot_replicates(fit, n_boot = n_boot, cores = cores)
+    reps <- .plm_boot_replicates(fit, n_boot = n_boot, cores = cores,
+                                 engine = engine)
     # Recompute the whole bound on each replicate.
     lows <- vapply(reps, function(p) {
       if (is.null(p)) return(NA_real_)

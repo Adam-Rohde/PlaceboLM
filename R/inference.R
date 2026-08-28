@@ -16,13 +16,23 @@
 # Draw n_boot resamples and return the refit coefficient triples for each.
 # Replicates that fail (e.g. a resample that drops a factor level) come back as
 # NULL and are filtered downstream rather than aborting the run.
-.plm_boot_replicates <- function(fit, n_boot, cores = NULL) {
+.plm_boot_replicates <- function(fit, n_boot, cores = NULL,
+                                 engine = c("lm", "matrix")) {
+  engine <- match.arg(engine)
   n <- nrow(fit$data)
+
+  # Indices are drawn HERE, in the parent process, before any forking. That is
+  # what makes set.seed() reproducible at any core count: the workers do no
+  # random number generation of their own.
   idx <- lapply(seq_len(n_boot), function(i) sample.int(n, n, replace = TRUE))
 
-  one <- function(ii) {
-    tryCatch(.plm_refit(fit, fit$data[ii, , drop = FALSE]),
-             error = function(e) NULL)
+  one <- if (engine == "matrix") {
+    prep <- .plm_matrix_prep(fit)
+    function(ii) tryCatch(.plm_refit_matrix(fit, prep, ii),
+                          error = function(e) NULL)
+  } else {
+    function(ii) tryCatch(.plm_refit(fit, fit$data[ii, , drop = FALSE]),
+                          error = function(e) NULL)
   }
 
   cores <- .plm_cores(cores)
@@ -59,6 +69,13 @@
 #' @param alpha Numeric. Significance level. Defaults to `0.05`.
 #' @param ci_type `"percentile"` (default) or `"normal"`.
 #' @param cores Integer. Cores for the bootstrap.
+#' @param engine `"lm"` (default) or `"matrix"`. The `"matrix"` engine builds
+#'   each model matrix once and solves by QR directly instead of re-running
+#'   `lm()` per replicate. Measured 2-4x faster, with the larger gains at
+#'   smaller `n` (the overhead it removes is fixed, while the QR it still
+#'   performs grows with `n`). It is opt-in: `"lm"` is the path whose numbers
+#'   back the published results. The two agree to within 1e-10; see
+#'   `test-engine.R`.
 #'
 #' @section Sampling assumptions:
 #' The bootstrap resamples rows independently, and the asymptotic justification
@@ -84,9 +101,11 @@
 #' @export
 plm_grid <- function(fit, k = NULL, m = NULL, imperfection = 0,
                      n_boot = 1000, alpha = 0.05,
-                     ci_type = c("percentile", "normal"), cores = NULL) {
+                     ci_type = c("percentile", "normal"), cores = NULL,
+                     engine = c("lm", "matrix")) {
   .plm_check_fit(fit)
   ci_type <- match.arg(ci_type)
+  engine  <- match.arg(engine)
 
   k_vals <- .plm_resolve_k(fit, k, m)
   imperfection <- .plm_check_imperfection(fit, imperfection)
@@ -99,7 +118,8 @@ plm_grid <- function(fit, k = NULL, m = NULL, imperfection = 0,
   grid <- grid[, c("k", "m", "imperfection", "adjusted_coefficient")]
 
   if (n_boot > 0) {
-    reps <- .plm_boot_replicates(fit, n_boot = n_boot, cores = cores)
+    reps <- .plm_boot_replicates(fit, n_boot = n_boot, cores = cores,
+                                 engine = engine)
     reps <- Filter(Negate(is.null), reps)
     if (!length(reps))
       stop("All bootstrap replicates failed to fit.", call. = FALSE)

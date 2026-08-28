@@ -43,6 +43,58 @@ Both renames are clean breaks without alias columns.
 * Arrows may be written `->`, `<-`, or with unicode arrows, in any case, with
   or without spaces, in any order.
 
+## Faster bootstrap (opt-in)
+
+* `plm_grid()` and `plm_bounds()` gain `engine`. The new `"matrix"` engine
+  builds each model matrix once and solves by QR directly, instead of
+  re-running `lm()` and `summary.lm()` on a freshly subset data frame every
+  replicate. Where two regressions share a right-hand side -- the
+  `placebo_outcome` case, which covers both of the paper's applications -- a
+  single QR serves both responses.
+* Measured, single core, 400 replicates:
+
+  | case | lm | matrix | speedup |
+  |---|---|---|---|
+  | n = 2000, placebo_outcome | 1.77s | 0.44s | 4.0x |
+  | n = 20000, placebo_outcome | 5.06s | 2.33s | 2.2x |
+  | n = 2000, post_outcome | 1.21s | 0.42s | 2.9x |
+
+  The gain shrinks with `n`: the overhead removed is fixed, while the QR still
+  performed grows. An earlier projection of ~7x came from summing component
+  microbenchmarks and overstated the end-to-end result.
+* `"lm"` remains the default. It is the path whose numbers back the published
+  results, and the fast path is opt-in until it has accrued mileage.
+* `test-engine.R` requires agreement to 1e-10 on the coefficient, standard
+  error, residual df and scale factor -- replicate by replicate, not just on
+  summaries -- for all five structures, across `k` and imperfection grids
+  including negatives, at n = 30 and n = 20000, with factor covariates, with no
+  covariates, and with a placebo of near-zero residual variance.
+* One deliberate behavioural match: `lm()` refuses to fit when a resample leaves
+  a factor with one level, so the matrix engine reproduces that refusal rather
+  than using the rank-deficient design. Its behaviour is arguably better, but
+  changing which replicates are usable is a statistical decision and should not
+  arrive via an engine switch.
+
+## Inference calibration
+
+`test-calibration.R` adds Monte Carlo validation, skipped unless
+`PLACEBOLM_SLOW_TESTS` is set. Coverage is judged against its Monte Carlo
+standard error rather than an arbitrary tolerance.
+
+* Empirical coverage of percentile-bootstrap, normal-approximation and analytic
+  intervals at the true sensitivity parameters, for both engines, at several
+  sample sizes.
+* The variance-direction prediction from the submitted draft's Section 2.3
+  (`1 + m^2 s2_N/s2_Y - 2 m s_YN/s2_Y`) checked against empirical sampling
+  variances -- the sharpest available test of that newly added section.
+* The paper's stated reason for recommending the bootstrap when reasoning with
+  `k` is demonstrated rather than quoted: intervals that hold `SF` fixed are
+  narrower than those that resample it.
+* A placebo with little residual variation produces wider intervals, not falsely
+  tight ones -- the failure mode the paper's volatility warning implies.
+* Clustered sampling makes the i.i.d. bootstrap under-cover, turning the
+  documented caveat into a demonstrated limit.
+
 ## Statistical validation
 
 * **DGPs matched to each causal structure** (`helper-dgp.R`). Previously one

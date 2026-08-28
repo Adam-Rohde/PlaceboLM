@@ -12,7 +12,8 @@ plm_grid(
   n_boot = 1000,
   alpha = 0.05,
   ci_type = c("percentile", "normal"),
-  cores = NULL
+  cores = NULL,
+  engine = c("lm", "matrix")
 )
 }
 \arguments{
@@ -31,6 +32,14 @@ estimates only.}
 \item{ci_type}{\code{"percentile"} (default) or \code{"normal"}.}
 
 \item{cores}{Integer. Cores for the bootstrap.}
+
+\item{engine}{\code{"lm"} (default) or \code{"matrix"}. The \code{"matrix"} engine builds
+each model matrix once and solves by QR directly instead of re-running
+\code{lm()} per replicate. Measured 2-4x faster, with the larger gains at
+smaller \code{n} (the overhead it removes is fixed, while the QR it still
+performs grows with \code{n}). It is opt-in: \code{"lm"} is the path whose numbers
+back the published results. The two agree to within 1e-10; see
+\code{test-engine.R}.}
 }
 \value{
 A data frame with one row per grid point and columns \code{k}, \code{m},

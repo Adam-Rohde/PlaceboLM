@@ -124,6 +124,15 @@ plm_analytic(fit, m = 1,
 Reasoning with `k` instead makes the scale factor an estimated quantity; the
 paper recommends the bootstrap there, which is what `plm_grid()` does.
 
+For a faster bootstrap, `engine = "matrix"` builds each model matrix once and
+solves by QR rather than re-running `lm()` per replicate — measured 2–4x, with
+the larger gains at smaller `n`. It is opt-in and agrees with the default to
+1e-10.
+
+```r
+plm_grid(fit, k = c(0, 1), n_boot = 2000, engine = "matrix")
+```
+
 Note the bootstrap resamples rows independently and the theory assumes i.i.d.
 sampling. Under clustered, panel, or spatially dependent sampling those
 intervals will generally be too narrow; use the cluster-robust `vcov` route
