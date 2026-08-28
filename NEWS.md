@@ -23,6 +23,26 @@
 
 Both renames are clean breaks without alias columns.
 
+## Specifying a structure by causal assumption
+
+* `placebo_lm()` gains `edges`: state the directed edges among the roles `D`
+  (treatment), `P` (placebo) and `Y` (outcome) and the package resolves them to
+  a structure, reporting which row of the paper's taxonomy it landed on. Naming
+  a structure with `structure=` still works; supplying both is an error.
+* `plm_edge_table()` documents the mapping, and a test asserts every row of it
+  actually resolves as advertised.
+* Two edge sets are genuinely ambiguous and require `placebo_role`: no direct
+  edges (`P` readable as a placebo outcome or a placebo treatment), and `P->Y`,
+  where the paper itself gives two readings of the same graph -- an imperfect
+  placebo treatment, or an observed confounder handled on the placebo-outcome
+  side. Omitting the role is an error rather than a silent default.
+* Contradictory edges (`D->P` with `P->D`), unknown edges, and edges written
+  with variable names instead of roles all produce errors that say what is
+  wrong. `D->P` plus `P->Y` is the mediator case and is refused through this
+  path too.
+* Arrows may be written `->`, `<-`, or with unicode arrows, in any case, with
+  or without spaces, in any order.
+
 ## Statistical validation
 
 * **DGPs matched to each causal structure** (`helper-dgp.R`). Previously one

@@ -21,11 +21,20 @@
 #'   observed confounder, or a post-outcome variable.
 #' @param covariates Character vector of observed covariate names (`X`) to
 #'   include in every regression. Defaults to `NULL` (intercept only).
-#' @param structure Character. The assumed causal structure. One of
-#'   `"placebo_outcome"`, `"placebo_treatment"`, `"observed_confounder_1"`,
-#'   `"observed_confounder_2"`, or `"post_outcome"`. See
-#'   [plm_structure_table()] for a description of each, and the
-#'   `structures` vignette for worked examples.
+#' @param structure Character. The assumed causal structure, named directly.
+#'   One of `"placebo_outcome"`, `"placebo_treatment"`,
+#'   `"observed_confounder_1"`, `"observed_confounder_2"`, or `"post_outcome"`.
+#'   See [plm_structure_table()]. Supply this *or* `edges`, not both.
+#' @param edges Character vector of directed edges among the roles `D`
+#'   (treatment), `P` (placebo) and `Y` (outcome) — for example `"P->Y"` or
+#'   `character(0)` for no direct edges. This is usually the easier way in:
+#'   state the causal assumptions and let the package report which row of the
+#'   paper's taxonomy they correspond to. See [plm_edge_table()].
+#' @param placebo_role `"outcome"` or `"treatment"`. Required only for the two
+#'   edge sets that admit more than one reading: no direct edges, and `"P->Y"`.
+#'   Ignored when `structure` is given.
+#' @param quiet Logical. Suppress the message reporting which structure the
+#'   edges resolved to. Defaults to `FALSE`.
 #'
 #' @return An object of class `"placebo_lm"`: a list with components
 #'   \describe{
@@ -64,18 +73,34 @@ placebo_lm <- function(data,
                        outcome,
                        treatment,
                        placebo,
-                       covariates = NULL,
-                       structure  = c("placebo_outcome",
-                                      "placebo_treatment",
-                                      "observed_confounder_1",
-                                      "observed_confounder_2",
-                                      "post_outcome")) {
+                       covariates   = NULL,
+                       structure    = NULL,
+                       edges        = NULL,
+                       placebo_role = NULL,
+                       quiet        = FALSE) {
+
+  # --- resolve the structure ------------------------------------------------
+  if (!is.null(structure) && !is.null(edges))
+    stop("Supply either `structure` or `edges`, not both.\n",
+         "`edges` states the causal assumptions and resolves to a structure; ",
+         "`structure`\nnames one directly.", call. = FALSE)
+
+  resolved_from_edges <- FALSE
+
+  if (!is.null(edges)) {
+    structure <- .plm_resolve_edges(edges, placebo_role)
+    resolved_from_edges <- TRUE
+  } else if (is.null(structure)) {
+    structure <- "placebo_outcome"
+  }
 
   # Refused structures get their own message before match.arg's generic one.
   if (length(structure) == 1L && structure %in% names(.plm_refused))
     stop(.plm_refused[[structure]], call. = FALSE)
 
-  structure <- match.arg(structure)
+  structure <- match.arg(structure, c("placebo_outcome", "placebo_treatment",
+                                      "observed_confounder_1",
+                                      "observed_confounder_2", "post_outcome"))
 
   # --- validation -----------------------------------------------------------
   if (!is.data.frame(data))
@@ -106,6 +131,13 @@ placebo_lm <- function(data,
 
   vars <- list(Y = outcome, D = treatment, P = placebo, X = covariates)
   spec <- plm_structures[[structure]]
+
+  # When the user described assumptions rather than naming a row, say which row
+  # those assumptions landed on. Getting this wrong silently is the main way a
+  # user can misuse the package, so the resolution is reported, not assumed.
+  if (resolved_from_edges && !quiet)
+    message("Placebo role: ", spec$label, "  (paper ", spec$paper_ref, ")\n",
+            "  Sensitivity parameter: ", spec$sens_param)
 
   # --- fit each regression exactly once -------------------------------------
   formulas <- spec$regressions(vars)

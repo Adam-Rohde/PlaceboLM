@@ -1,0 +1,168 @@
+# Edge-based structure resolution ----------------------------------------------
+#
+# Users know their causal assumptions. They do not know which row of Tables 2-3
+# of the paper those assumptions correspond to. Naming a structure directly
+# ("observed_confounder_1" vs "observed_confounder_2") asks them to translate,
+# and a wrong guess produces a plausible-looking number rather than an error.
+#
+# So `placebo_lm()` also accepts the assumptions themselves, as directed edges
+# among the three roles D (treatment), P (placebo) and Y (outcome), and resolves
+# them to a structure -- reporting which taxonomy row it landed on.
+#
+# Two edge sets admit more than one reading, and that ambiguity is real rather
+# than a gap in the encoding:
+#
+#   no edges    P can be read as a placebo outcome or a placebo treatment.
+#   "P->Y"      the paper discusses BOTH readings of this graph (its Table 2[c]):
+#               as an imperfect placebo treatment, or as an observed confounder
+#               handled on the placebo-outcome side.
+#
+# In those two cases `placebo_role` picks the reading. Everywhere else the
+# structure is determined, because the paper's placebo-treatment case requires
+# that P is not a descendant of D and D is not a descendant of P -- so an edge
+# in either direction between D and P rules that reading out.
+
+
+# The resolution table. Keys are canonical, sorted edge sets.
+.plm_edge_map <- list(
+  list(edges = character(0), role = "outcome",   structure = "placebo_outcome"),
+  list(edges = character(0), role = "treatment", structure = "placebo_treatment"),
+  list(edges = "D->P",       role = NA,          structure = "placebo_outcome"),
+  list(edges = "P->Y",       role = "treatment", structure = "placebo_treatment"),
+  list(edges = "P->Y",       role = "outcome",   structure = "observed_confounder_1"),
+  list(edges = "P->D",       role = NA,          structure = "observed_confounder_2"),
+  list(edges = "Y->P",       role = NA,          structure = "post_outcome")
+)
+
+.plm_valid_edges <- c("D->P", "P->D", "P->Y", "Y->P")
+
+
+# Normalise user-supplied edges: strip whitespace, accept unicode arrows and
+# lowercase role letters, then sort so that order does not matter.
+.plm_canon_edges <- function(edges) {
+  if (is.null(edges) || length(edges) == 0L) return(character(0))
+  if (!is.character(edges))
+    stop("`edges` must be a character vector such as c(\"P->Y\").",
+         call. = FALSE)
+
+  e <- gsub("[[:space:]]", "", edges)
+  e <- gsub("\u2192", "->", e, fixed = TRUE)  # unicode right arrow
+  e <- gsub("\u2190", "<-", e, fixed = TRUE)  # unicode left arrow
+  e <- toupper(e)
+
+  # Rewrite "A<-B" as "B->A" so both directions can be written naturally.
+  e <- vapply(e, function(x) {
+    if (grepl("<-", x, fixed = TRUE)) {
+      parts <- strsplit(x, "<-", fixed = TRUE)[[1]]
+      if (length(parts) == 2L) paste0(parts[2], "->", parts[1]) else x
+    } else x
+  }, character(1), USE.NAMES = FALSE)
+
+  bad <- setdiff(e, .plm_valid_edges)
+  if (length(bad))
+    stop("Unrecognised edge(s): ", paste(bad, collapse = ", "), ".\n",
+         "Edges are written between the ROLES D (treatment), P (placebo) and ",
+         "Y (outcome),\nnot the variable names, and must be one of: ",
+         paste(.plm_valid_edges, collapse = ", "), ".", call. = FALSE)
+
+  e <- sort(unique(e))
+
+  if (all(c("D->P", "P->D") %in% e))
+    stop("Edges \"D->P\" and \"P->D\" contradict each other: the treatment and ",
+         "the placebo\ncannot each cause the other.", call. = FALSE)
+  if (all(c("P->Y", "Y->P") %in% e))
+    stop("Edges \"P->Y\" and \"Y->P\" contradict each other: the placebo and ",
+         "the outcome\ncannot each cause the other.", call. = FALSE)
+
+  e
+}
+
+
+# Resolve edges (+ optional role) to a structure name, or stop with an
+# informative message.
+.plm_resolve_edges <- function(edges, placebo_role = NULL) {
+  e <- .plm_canon_edges(edges)
+
+  # The mediator case is refused here rather than silently estimated.
+  if (all(c("D->P", "P->Y") %in% e))
+    stop(.plm_refused$mediator, call. = FALSE)
+
+  matches <- Filter(function(row) identical(row$edges, e), .plm_edge_map)
+
+  if (length(matches) == 0L)
+    stop("No supported causal structure matches the edge set ",
+         if (length(e)) paste0("c(\"", paste(e, collapse = "\", \""), "\")")
+         else "character(0)",
+         ".\nSee plm_edge_table() for the combinations this package supports.",
+         call. = FALSE)
+
+  # Determined: exactly one reading, role is irrelevant (but validated below).
+  if (length(matches) == 1L && is.na(matches[[1]]$role)) {
+    if (!is.null(placebo_role))
+      message("`placebo_role` is ignored here: the edge set ",
+              paste0("c(\"", paste(e, collapse = "\", \""), "\")"),
+              " admits only one reading.")
+    return(matches[[1]]$structure)
+  }
+
+  roles <- vapply(matches, `[[`, character(1), "role")
+
+  if (is.null(placebo_role))
+    stop("This edge set admits more than one reading, so `placebo_role` is ",
+         "required.\n",
+         if (length(e) == 0L)
+           paste0("  With no direct edges, P may be read as a placebo OUTCOME ",
+                  "(it shares\n  confounders with Y) or a placebo TREATMENT ",
+                  "(it shares confounders with D).\n")
+         else
+           paste0("  With P->Y, the paper gives two readings of this graph ",
+                  "(its Table 2[c]):\n  an imperfect placebo TREATMENT, or an ",
+                  "observed confounder handled on the\n  placebo OUTCOME side. ",
+                  "Fitting both and comparing is legitimate.\n"),
+         "  Supply placebo_role = \"outcome\" or \"treatment\".",
+         call. = FALSE)
+
+  placebo_role <- match.arg(placebo_role, c("outcome", "treatment"))
+  hit <- matches[[which(roles == placebo_role)]]
+  hit$structure
+}
+
+
+#' How causal assumptions map to structures
+#'
+#' @description
+#' The resolution table used by [placebo_lm()] when a structure is described
+#' with `edges` rather than named directly. Edges are written between the roles
+#' `D` (treatment), `P` (placebo) and `Y` (outcome).
+#'
+#' Two rows share an edge set: with no direct edges, and with `P->Y`, the
+#' placebo admits two readings and `placebo_role` selects between them. The
+#' second of those is the paper's own observation that its Table 2[c] graph can
+#' be analysed either as an imperfect placebo treatment or as an observed
+#' confounder.
+#'
+#' The combination `D->P` plus `P->Y` makes the placebo a mediator, which the
+#' paper does not recommend; requesting it raises an error.
+#'
+#' @return A data frame with columns `edges`, `placebo_role`, `structure`, and
+#'   `paper_ref`.
+#'
+#' @examples
+#' plm_edge_table()
+#'
+#' @export
+plm_edge_table <- function() {
+  rows <- lapply(.plm_edge_map, function(r) {
+    data.frame(
+      edges        = if (length(r$edges)) paste(r$edges, collapse = ", ")
+                     else "(none)",
+      placebo_role = if (is.na(r$role)) "(either)" else r$role,
+      structure    = r$structure,
+      paper_ref    = plm_structures[[r$structure]]$paper_ref,
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- do.call(rbind, rows)
+  rownames(out) <- NULL
+  out
+}

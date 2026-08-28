@@ -131,6 +131,21 @@ above on the `m` path instead.
 
 ## Supported causal structures
 
+You can name a structure directly, or — usually easier — state your causal
+assumptions as edges among the roles `D`, `P` and `Y` and let the package report
+which row of the paper's taxonomy that is:
+
+```r
+placebo_lm(dat, "Y", "D", "P", covariates = "X", edges = "P->D")
+#> Placebo role: Observed Confounder 2  (paper Table 3[e], [f])
+#>   Sensitivity parameter: beta_D_P_given_ZX
+
+plm_edge_table()   # the full mapping
+```
+
+Two edge sets are genuinely ambiguous — no direct edges, and `P->Y` — and there
+`placebo_role` selects between the readings rather than a default being assumed.
+
 ```r
 plm_structure_table()
 ```

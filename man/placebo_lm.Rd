@@ -10,8 +10,10 @@ placebo_lm(
   treatment,
   placebo,
   covariates = NULL,
-  structure = c("placebo_outcome", "placebo_treatment", "observed_confounder_1",
-    "observed_confounder_2", "post_outcome")
+  structure = NULL,
+  edges = NULL,
+  placebo_role = NULL,
+  quiet = FALSE
 )
 }
 \arguments{
@@ -28,11 +30,23 @@ observed confounder, or a post-outcome variable.}
 \item{covariates}{Character vector of observed covariate names (\code{X}) to
 include in every regression. Defaults to \code{NULL} (intercept only).}
 
-\item{structure}{Character. The assumed causal structure. One of
-\code{"placebo_outcome"}, \code{"placebo_treatment"}, \code{"observed_confounder_1"},
-\code{"observed_confounder_2"}, or \code{"post_outcome"}. See
-\code{\link[=plm_structure_table]{plm_structure_table()}} for a description of each, and the
-\code{structures} vignette for worked examples.}
+\item{structure}{Character. The assumed causal structure, named directly.
+One of \code{"placebo_outcome"}, \code{"placebo_treatment"},
+\code{"observed_confounder_1"}, \code{"observed_confounder_2"}, or \code{"post_outcome"}.
+See \code{\link[=plm_structure_table]{plm_structure_table()}}. Supply this \emph{or} \code{edges}, not both.}
+
+\item{edges}{Character vector of directed edges among the roles \code{D}
+(treatment), \code{P} (placebo) and \code{Y} (outcome) — for example \code{"P->Y"} or
+\code{character(0)} for no direct edges. This is usually the easier way in:
+state the causal assumptions and let the package report which row of the
+paper's taxonomy they correspond to. See \code{\link[=plm_edge_table]{plm_edge_table()}}.}
+
+\item{placebo_role}{\code{"outcome"} or \code{"treatment"}. Required only for the two
+edge sets that admit more than one reading: no direct edges, and \code{"P->Y"}.
+Ignored when \code{structure} is given.}
+
+\item{quiet}{Logical. Suppress the message reporting which structure the
+edges resolved to. Defaults to \code{FALSE}.}
 }
 \value{
 An object of class \code{"placebo_lm"}: a list with components
