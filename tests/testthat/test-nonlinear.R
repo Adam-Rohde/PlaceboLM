@@ -61,7 +61,8 @@ test_that("under non-linearity the projection is not the structural coefficient"
   # effect 2, but Y loads on Z through 1.5*Z + 0.8*Z^2 while P loads through
   # Z + 0.5*Z^2, so the linear projection is a different number entirely.
   pop <- plm_population_of(function(n, seed)
-    plm_dgp_nonlinear("nl_confounding", n = n, seed = seed), n = 200000)
+    plm_dgp_nonlinear("nl_confounding", n = n, seed = seed),
+    label = "nl_confounding", n = 200000)
   expect_gt(abs(pop$target_long - 2), 0.3)
   expect_gt(abs(pop$m - 1), 0.2)
 })
@@ -70,7 +71,8 @@ test_that("under non-linearity the projection is not the structural coefficient"
 # ---- the estimand: projection, not ATE --------------------------------------
 
 test_that("the projection and the ATE genuinely differ in the heterogeneous DGP", {
-  pop <- plm_population_of(plm_dgp_heterogeneous, n = 200000)
+  pop <- plm_population_of(plm_dgp_heterogeneous, label = "heterogeneous",
+                           n = 200000)
   # ATE is 3 by construction; the variance-weighted projection is near 3.86.
   expect_gt(abs(pop$target_long - PLM_HET_ATE), 0.5)
 })
@@ -81,7 +83,7 @@ test_that("intervals cover the projection and NOT the ATE", {
   # estimate. Coverage of the projection should be nominal; coverage of the ATE
   # should be essentially zero, because the ATE is simply not the target.
   skip_unless_slow()
-  pop <- plm_population_of(plm_dgp_heterogeneous)
+  pop <- plm_population_of(plm_dgp_heterogeneous, label = "heterogeneous")
   S <- 300; n <- 2000
 
   res <- t(vapply(seq_len(S), function(s) {
@@ -110,7 +112,7 @@ test_that("bootstrap intervals stay calibrated under non-linearity", {
 
   for (k in kinds) {
     gen <- local({ kk <- k; function(n, seed) plm_dgp_nonlinear(kk, n = n, seed = seed) })
-    pop <- plm_population_of(gen, n = 400000)
+    pop <- plm_population_of(gen, label = k, n = 400000)
 
     cov <- mean(vapply(seq_len(S), function(s) {
       d   <- plm_dgp_nonlinear(k, n = n, seed = 80000 + s)
@@ -142,7 +144,8 @@ test_that("a target whose m does not converge is refused, not silently used", {
                D = D, P = Z^2 + sin(3 * Z) + 0.3 * D + stats::rt(n, 4),
                X = X, Z = Z)
   }
-  expect_error(plm_population_of(hostile, n = 200000), "does not converge")
+  expect_error(plm_population_of(hostile, label = "hostile", n = 200000),
+               "does not converge")
 })
 
 
@@ -150,7 +153,34 @@ test_that("the well-behaved generators pass the convergence guard", {
   skip_unless_slow()
   for (k in kinds) {
     gen <- local({ kk <- k; function(n, seed) plm_dgp_nonlinear(kk, n = n, seed = seed) })
-    pop <- plm_population_of(gen, n = 400000)
+    pop <- plm_population_of(gen, label = k, n = 400000)
     expect_lt(pop$cv_m, 1.0, label = paste(k, "cv(m)"))
   }
+})
+
+
+test_that("population values are not confused between generators", {
+  # The failure this guards against actually happened. Three generators built
+  # as local({ kk <- k; function(n, seed) f(kk, ...) }) share an identical
+  # body, so a cache keyed on deparse(body()) served one entry to all three.
+  # Two DGPs were then scored against the wrong target and their measured
+  # coverage was exactly 0 -- a bug signature masquerading as a finding.
+  a <- plm_population_of(function(n, seed)
+         plm_dgp_nonlinear("nl_confounding", n = n, seed = seed),
+         label = "cache_a", n = 100000)
+  b <- plm_population_of(function(n, seed)
+         plm_dgp_nonlinear("nl_treatment", n = n, seed = seed),
+         label = "cache_b", n = 100000)
+  # These two generators have genuinely different targets; if the cache confused
+  # them the values would be identical.
+  expect_false(isTRUE(all.equal(a$target_long, b$target_long)))
+  expect_false(isTRUE(all.equal(a$m, b$m)))
+})
+
+
+test_that("plm_population_of() refuses to guess a generator's identity", {
+  expect_error(
+    plm_population_of(function(n, seed)
+      plm_dgp_nonlinear("interaction", n = n, seed = seed), n = 50000),
+    "`label` is required")
 })

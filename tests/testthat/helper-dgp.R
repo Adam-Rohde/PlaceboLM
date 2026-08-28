@@ -345,12 +345,26 @@ PLM_HET_ATE <- 3
 
 # Population parameters for a generator supplied as a function, with the same
 # convergence guard as plm_population().
-plm_population_of <- function(gen, n = 800000, seeds = 1:4, tol_cv = 1.0,
-                              label = NULL) {
-  # deparse() of an anonymous function returns several lines, so collapse to a
-  # single string before using it as an environment key.
-  key <- if (!is.null(label)) paste(label, n, sep = "/")
-         else paste(paste(deparse(body(gen)), collapse = ""), n, sep = "/")
+plm_population_of <- function(gen, label, n = 800000, seeds = 1:4,
+                              tol_cv = 1.0) {
+  # `label` is REQUIRED, and deliberately so. An earlier version derived the
+  # cache key from deparse(body(gen)), which silently collided: three
+  # generators built as local({ kk <- k; function(n, seed) f(kk, ...) }) all
+  # have the identical body, because kk lives in the closure environment rather
+  # than the body. One cached entry then served all three, two DGPs were scored
+  # against the wrong population target, and their measured coverage was
+  # exactly 0.
+  #
+  # Coverage of exactly 0 is a bug signature, not a statistical finding, and it
+  # is worth noticing that the collision defeated the convergence guard this
+  # function exists to provide: the target was well determined, just not the
+  # target for that generator. Naming the generator explicitly removes the
+  # failure mode rather than making the key cleverer.
+  if (missing(label) || !is.character(label) || length(label) != 1L)
+    stop("`label` is required: give this generator a unique name so its ",
+         "population\nvalues cannot be confused with another's in the cache.",
+         call. = FALSE)
+  key <- paste(label, n, sep = "/")
   if (!is.null(.plm_pop_cache[[key]])) return(.plm_pop_cache[[key]])
 
   one <- function(N, sd) {
