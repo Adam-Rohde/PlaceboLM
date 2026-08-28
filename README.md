@@ -206,6 +206,17 @@ vignette("structures",      package = "PlaceboLM")  # choosing a structure
 vignette("applications",    package = "PlaceboLM")  # NSW and Zika
 ```
 
+## Checking against the paper
+
+```
+Rscript data-raw/verify-paper-numbers.R
+```
+
+Compares the package against every figure published in the applications --
+scale factors, benchmark estimates, backed-out `k`, bounds and the triangulated
+intersection -- at the paper's own rounding. Needs `qte` for NSW, and the Zika
+extract described in `data-raw/zika.R`.
+
 ## Reproducing the paper
 
 The example code printed in the paper's appendix uses the pre-0.2.0 interface

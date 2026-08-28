@@ -18,10 +18,20 @@ library(PlaceboLM)
 ```
 
 This vignette reproduces the two empirical applications in Sections 3.2 and 3.3
-of Rohde and Hazlett. Both need data that is not bundled with the package;
-`data-raw/` contains a script that fetches and prepares it. Where the data is
-absent the code is shown but not run, and the paper's published figures are
-quoted so you can check your own run against them.
+of Rohde and Hazlett. Both need data that is not bundled with the package: NSW
+comes from the `qte` package and the Zika data from the Harvard Dataverse (see
+`data-raw/zika.R`). Where the data is absent the code is shown but not run, and
+the paper's published figures are quoted so you can check your own run against
+them.
+
+To check the package against those figures automatically, run
+
+```
+Rscript data-raw/verify-paper-numbers.R
+```
+
+which compares every published quantity in this vignette against the fitted
+values at the paper's own rounding, and reports pass or fail for each.
 
 ---
 
