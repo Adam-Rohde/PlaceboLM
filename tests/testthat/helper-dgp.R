@@ -107,3 +107,56 @@ plm_cohen_f <- function(a, b, cond, data) {
   r <- plm_pcor(a, b, cond, data)
   r / sqrt(1 - r^2)
 }
+
+
+# --- Population parameters, for calibration tests -----------------------------
+#
+# Coverage must be measured against a target that is FIXED across simulations.
+# Recomputing the "truth" from each sample is vacuous here, because the recovery
+# identity in test-recovery.R is exact in sample: the estimator would hit a
+# sample-specific target every single draw and coverage would be 1 by
+# construction.
+#
+# So the population target and the population sensitivity parameters are taken
+# once, from a single very large draw, and reused. For the placebo_outcome DGP
+# these recover the values built into the generator (effect 2, imperfection 0.3),
+# which is a useful check that the machinery is pointed at the right quantity.
+
+.plm_pop_cache <- new.env(parent = emptyenv())
+
+plm_population <- function(structure, n = 400000, seed = 987) {
+  key <- paste(structure, n, seed, sep = "/")
+  if (!is.null(.plm_pop_cache[[key]])) return(.plm_pop_cache[[key]])
+  d   <- plm_dgp(structure, n = n, seed = seed)
+  fit <- placebo_lm(d, "Y", "D", "P", covariates = "X", structure = structure)
+  out <- plm_true_params(fit, d)
+  .plm_pop_cache[[key]] <- out
+  out
+}
+
+
+# A clustered version of the placebo-outcome DGP: the unobserved confounder has
+# a cluster-level component, so units within a cluster are dependent. Used to
+# show that the i.i.d. bootstrap under-covers here.
+plm_dgp_clustered <- function(n_clust = 40, per = 20, seed = 1, beta_D = 2) {
+  set.seed(seed)
+  cl <- rep(seq_len(n_clust), each = per)
+  n  <- length(cl)
+  Z  <- stats::rnorm(n_clust, sd = 1.2)[cl] + stats::rnorm(n, sd = 0.5)
+  X  <- stats::rnorm(n)
+  D  <- X + Z + stats::rnorm(n)
+  P  <- X + Z + stats::rnorm(n) + 0.3 * D
+  Y  <- beta_D * D + X + Z + stats::rnorm(n)
+  data.frame(Y = Y, D = D, P = P, X = X, Z = Z, cl = factor(cl))
+}
+
+plm_population_clustered <- function(n_clust = 4000, per = 20, seed = 987) {
+  key <- paste("clustered", n_clust, per, seed, sep = "/")
+  if (!is.null(.plm_pop_cache[[key]])) return(.plm_pop_cache[[key]])
+  d   <- plm_dgp_clustered(n_clust = n_clust, per = per, seed = seed)
+  fit <- placebo_lm(d, "Y", "D", "P", covariates = "X",
+                    structure = "placebo_outcome")
+  out <- plm_true_params(fit, d)
+  .plm_pop_cache[[key]] <- out
+  out
+}

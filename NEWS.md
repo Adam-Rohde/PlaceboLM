@@ -82,8 +82,15 @@ Both renames are clean breaks without alias columns.
 standard error rather than an arbitrary tolerance.
 
 * Empirical coverage of percentile-bootstrap, normal-approximation and analytic
-  intervals at the true sensitivity parameters, for both engines, at several
-  sample sizes.
+  intervals, for both engines, at several sample sizes.
+* Targets and sensitivity parameters are **population** quantities, taken once
+  from a very large draw and held fixed across simulations. This matters: the
+  first version of the suite recomputed the "truth" from each sample, and since
+  the recovery identity is exact in sample, the estimator hit that target to
+  machine precision on every draw and coverage was 1.0 by construction. The
+  tests passed and measured nothing. `plm_population()` in `helper-dgp.R` now
+  supplies fixed targets, and a guard test checks they still recover the values
+  built into the generator.
 * The variance-direction prediction from the submitted draft's Section 2.3
   (`1 + m^2 s2_N/s2_Y - 2 m s_YN/s2_Y`) checked against empirical sampling
   variances -- the sharpest available test of that newly added section.
