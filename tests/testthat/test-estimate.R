@@ -42,29 +42,10 @@ test_that("the estimator is vectorised over both parameters", {
   expect_length(plm_estimate(fit, k = 1, imperfection = c(0, 0.1, 0.2)), 3L)
 })
 
-test_that("oracle recovery works for all five structures", {
-  # Setting the sensitivity parameter to its oracle value (the coefficient that
-  # would be obtained if the unobserved confounder were included) and k = 1
-  # should recover the true effect of 1 in the placebo_outcome case, which is
-  # the structure the DGP is built for. For the other structures the DGP does
-  # not match the assumed graph, so we check the weaker but still meaningful
-  # property that the oracle adjustment moves the estimate toward the truth.
-  d <- plm_test_data()
-
-  fit <- placebo_lm(d, "Y", "D", "P", covariates = "X",
-                    structure = "placebo_outcome")
-  oracle <- plm_oracle_imperfection(fit, d)
-  expect_equal(plm_estimate(fit, k = 1, imperfection = oracle), 1,
-               tolerance = 0.05)
-
-  for (s in setdiff(names(plm_structures), "placebo_outcome")) {
-    f <- placebo_lm(d, "Y", "D", "P", covariates = "X", structure = s)
-    o <- plm_oracle_imperfection(f, d)
-    adjusted <- plm_estimate(f, k = 1, imperfection = o)
-    naive    <- plm_estimate(f, k = 0)
-    expect_lt(abs(adjusted - 1), abs(naive - 1))
-  }
-})
+# Oracle recovery lives in test-recovery.R, which uses a DGP matched to each
+# structure's causal graph. The version that used to sit here relied on one
+# shared DGP and so could only assert the weak claim that the adjustment moved
+# the estimate in the right direction for four of the five structures.
 
 test_that("plm_solve() inverts plm_estimate()", {
   d <- plm_test_data()
@@ -104,9 +85,9 @@ test_that("plm_benchmarks() returns the three reference points", {
   bm <- plm_benchmarks(fit)
   expect_equal(nrow(bm), 3L)
   expect_equal(bm$k[1], 0)          # no unobserved confounding
-  expect_equal(bm$m[2], 1)          # DID is exactly m = 1
+  expect_equal(bm$m[2], 1)          # m = 1 row
   expect_equal(bm$k[3], 1)          # equiconfounding after rescaling
-  expect_equal(bm$estimate, plm_estimate(fit, k = bm$k))
+  expect_equal(bm$adjusted_coefficient, plm_estimate(fit, k = bm$k))
 })
 
 test_that("bounds are the extremes over the assumption region", {

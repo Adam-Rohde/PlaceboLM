@@ -37,6 +37,8 @@
 #'     \item{`regressions`}{the fitted `lm` objects}
 #'     \item{`coefs`}{list with `target` and `sens`, each
 #'       `list(estimate=, se=, df=)`}
+#'     \item{`estimand`}{what is being partially identified, in words}
+#'     \item{`assumptions`}{the substantive claims implied by the structure}
 #'     \item{`SF`}{the scale factor}
 #'   }
 #'
@@ -162,6 +164,8 @@ placebo_lm <- function(data,
       vars        = vars,
       structure   = structure,
       spec        = spec,
+      estimand    = spec$estimand,
+      assumptions = spec$assumptions,
       formulas    = formulas,
       regressions = regressions,
       coefs       = coefs,

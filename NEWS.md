@@ -1,4 +1,48 @@
-# PlaceboLM 0.2.0
+# PlaceboLM (development)
+
+## Correctness and labelling
+
+* **`m = 1` is no longer labelled "DID" for every structure.** Difference-in-
+  differences is the special case where the placebo is a pre-treatment measure of
+  the outcome. `plm_benchmarks()` previously labelled the `m = 1` row
+  `"DID (m = 1)"` for a placebo treatment and a post-outcome placebo too, where
+  no such reading exists. The registry now carries `did_equivalent`, and other
+  structures read `"Equiconfounding, raw scale (m = 1)"`.
+* **The estimand is stated explicitly.** What is partially identified is the
+  treatment coefficient in the infeasible long regression -- a linear projection,
+  not automatically an average treatment effect. `fit$estimand` and
+  `fit$assumptions` record this, `print()` shows both, and the output column
+  `estimate` is renamed `adjusted_coefficient`.
+* **`plm_bounds()` no longer calls its bootstrap columns a confidence interval.**
+  `ci_lower`/`ci_upper` are renamed `lower_boot_q`/`upper_boot_q`. They summarise
+  sampling variability in the bounds; they are not a confidence region for the
+  identified set, and `?plm_bounds` now distinguishes the four objects that are
+  easy to confuse here.
+* Bootstrap documentation states the i.i.d. sampling assumption and points to
+  cluster-robust `plm_analytic()` for dependent data.
+
+Both renames are clean breaks without alias columns.
+
+## Statistical validation
+
+* **DGPs matched to each causal structure** (`helper-dgp.R`). Previously one
+  shared DGP was used for all five, which forced the oracle-recovery test to
+  assert only that the adjustment moved the estimate in the right direction.
+* **`test-recovery.R`** verifies that feeding the true sensitivity parameters
+  into the estimator returns the long-regression coefficient. This identity is
+  exact in sample rather than asymptotic, so it holds to machine precision, for
+  every structure, across seeds and effect sizes.
+* **The scale factor is validated substantively**, not just algebraically,
+  against the paper's own definitions of `k` -- a ratio of partial correlations
+  for a placebo outcome, of Cohen's *f* values for a placebo treatment. The
+  recovery tests cannot do this, because `SF` cancels within them.
+* Invariance properties: `k` is scale-free while `m` is not; `k = 0` returns the
+  short-regression coefficient exactly; the adjustment vanishes when the
+  postulated imperfection equals the observed sensitivity coefficient; the
+  estimate is monotone in `k`.
+* **`test-reproducibility.R`** pins bootstrap reproducibility under
+  `parallel::mclapply`. Indices are drawn in the parent before forking, so
+  `set.seed()` behaves identically at any core count.
 
 Ground-up rewrite around the structure of the method rather than the history of
 the code. The arithmetic is unchanged: `plm_estimate()` reproduces the previous

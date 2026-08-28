@@ -22,6 +22,13 @@
 #   sens_param   name of the sensitivity parameter (the "placebo imperfection"),
 #                in the paper's beta_A_B_given_C notation
 #   sens_expr    function(v) -> plotmath expression for axis labels
+#   did_equivalent  TRUE only where m = 1 has a difference-in-differences reading,
+#                i.e. where the placebo is a pre-treatment measure of the outcome.
+#                Everywhere else m = 1 is equiconfounding on the raw scale and
+#                nothing more.
+#   estimand     what the adjusted number IS: a coefficient in an infeasible long
+#                regression, stated in words.
+#   assumptions  the substantive claims the user is making by choosing this row.
 #
 # `v` is the variable map: list(Y=, D=, P=, X=).
 
@@ -52,7 +59,14 @@ plm_structures <- list(
     target_coef = function(v) list(reg = "target", coef = v$D),
     sens_coef   = function(v) list(reg = "sens",   coef = v$D),
     sens_param  = "beta_P_D_given_ZX",
-    sens_expr   = function(v) bquote(beta[.(v$P) * "~" * .(v$D) * "|Z,X"])
+    sens_expr   = function(v) bquote(beta[.(v$P) * "~" * .(v$D) * "|Z,X"]),
+    did_equivalent = TRUE,
+    estimand    = "Coefficient on the treatment in the long regression of the outcome on treatment, covariates, and the unobserved confounders.",
+    assumptions = c(
+      "P shares unobserved confounders with Y.",
+      "D does not cause P, or does so only to the extent postulated by the imperfection parameter.",
+      "m = 1 has a difference-in-differences reading ONLY when P is a pre-treatment measure of the same outcome."
+    )
   ),
 
   # --- Table 2[a], [c] -------------------------------------------------------
@@ -70,7 +84,15 @@ plm_structures <- list(
     target_coef = function(v) list(reg = "target", coef = v$D),
     sens_coef   = function(v) list(reg = "target", coef = v$P),
     sens_param  = "beta_Y_P_given_DZX",
-    sens_expr   = function(v) bquote(beta[.(v$Y) * "~" * .(v$P) * "|" * .(v$D) * ",Z,X"])
+    sens_expr   = function(v) bquote(beta[.(v$Y) * "~" * .(v$P) * "|" * .(v$D) * ",Z,X"]),
+    did_equivalent = FALSE,
+    estimand    = "Coefficient on the treatment in the long regression of the outcome on treatment, placebo, covariates, and the unobserved confounders.",
+    assumptions = c(
+      "P shares unobserved confounders with D.",
+      "P is not a descendant of D and D is not a descendant of P.",
+      "D and P are good or neutral controls for each other.",
+      "P does not cause Y, or does so only to the extent postulated."
+    )
   ),
 
   # --- Table 2[c] ------------------------------------------------------------
@@ -89,7 +111,14 @@ plm_structures <- list(
     target_coef = function(v) list(reg = "target", coef = v$D),
     sens_coef   = function(v) list(reg = "sens",   coef = v$D),
     sens_param  = "beta_P_D_given_ZX",
-    sens_expr   = function(v) bquote(beta[.(v$P) * "~" * .(v$D) * "|Z,X"])
+    sens_expr   = function(v) bquote(beta[.(v$P) * "~" * .(v$D) * "|Z,X"]),
+    did_equivalent = FALSE,
+    estimand    = "Coefficient on the treatment in the long regression of the outcome on treatment, placebo, covariates, and the unobserved confounders.",
+    assumptions = c(
+      "P causes Y.",
+      "P shares unobserved confounders with D.",
+      "Conditioning on P blocks the non-causal D-Y path it opens."
+    )
   ),
 
   # --- Table 3[e], [f] -------------------------------------------------------
@@ -107,7 +136,13 @@ plm_structures <- list(
     target_coef = function(v) list(reg = "target", coef = v$D),
     sens_coef   = function(v) list(reg = "sens",   coef = v$P),
     sens_param  = "beta_D_P_given_ZX",
-    sens_expr   = function(v) bquote(beta[.(v$D) * "~" * .(v$P) * "|Z,X"])
+    sens_expr   = function(v) bquote(beta[.(v$D) * "~" * .(v$P) * "|Z,X"]),
+    did_equivalent = FALSE,
+    estimand    = "Coefficient on the treatment in the long regression of the outcome on treatment, placebo, covariates, and the unobserved confounders.",
+    assumptions = c(
+      "P causes D.",
+      "P shares unobserved confounders with the D-Y relationship."
+    )
   ),
 
   # --- Table 3[g], [h] -------------------------------------------------------
@@ -125,7 +160,13 @@ plm_structures <- list(
     target_coef = function(v) list(reg = "target", coef = v$D),
     sens_coef   = function(v) list(reg = "sens",   coef = v$Y),
     sens_param  = "beta_P_Y_given_DZX",
-    sens_expr   = function(v) bquote(beta[.(v$P) * "~" * .(v$Y) * "|" * .(v$D) * ",Z,X"])
+    sens_expr   = function(v) bquote(beta[.(v$P) * "~" * .(v$Y) * "|" * .(v$D) * ",Z,X"]),
+    did_equivalent = FALSE,
+    estimand    = "Coefficient on the treatment in the long regression of the outcome on treatment, covariates, and the unobserved confounders.",
+    assumptions = c(
+      "Y causes P (P is a descendant of the outcome).",
+      "P is not caused by D except through Y."
+    )
   )
 )
 

@@ -85,7 +85,14 @@ fit <- placebo_lm(
 fit
 ```
 
-The printout names the two sensitivity parameters the analysis rests on.
+The printout states the **estimand** — the coefficient on exercise in the long
+regression that would include socioeconomic status if we could observe it. That
+is a linear projection. It is an average causal effect only under further
+assumptions, such as no effect heterogeneity, so the package calls it
+`adjusted_coefficient` rather than `estimate`. It also lists the assumptions
+this structure commits you to, and the two sensitivity parameters the analysis
+rests on.
+
 `beta_Y_P_given_DZX` is the **placebo imperfection**: the effect vitamins would
 still have on heart disease after adjusting for exercise and for the unobserved
 confounders. We are willing to argue this is zero — that is the substantive
@@ -96,8 +103,16 @@ The other is relative confounding, and it comes in two forms.
 ## Two ways to talk about relative confounding
 
 `m` is the raw ratio of the bias in the exercise–heart-disease relationship to
-the bias in the vitamins–heart-disease relationship. Conventional
-difference-in-differences is exactly `m = 1`.
+the bias in the vitamins–heart-disease relationship. Equiconfounding on the raw
+scale is `m = 1`.
+
+The paper computes the `m = 1` estimate here and calls it the conventional DID
+estimate, by analogy with how difference-in-differences arithmetic works. Worth
+being precise about what that does and does not mean: the *interpretation* of
+`m = 1` as parallel trends belongs to the case where the placebo is a
+pre-treatment measure of the outcome. This example uses a placebo treatment, so
+`m = 1` is the same arithmetic without that reading, and the benchmark label
+reflects it.
 
 `k` is the same idea after correcting for the fact that exercise and vitamin
 use are on different scales, related by `m = k * SF` where `SF` is the scale factor
@@ -108,7 +123,7 @@ Supply whichever you prefer:
 
 ```{r params}
 plm_estimate(fit, k = 0)   # no unobserved confounding at all
-plm_estimate(fit, m = 1)   # conventional difference-in-differences
+plm_estimate(fit, m = 1)   # equiconfounding on the raw scale
 plm_estimate(fit, k = 1)   # equal confounding, after rescaling
 ```
 
@@ -121,8 +136,8 @@ plm_benchmarks(fit)
 Assuming away unobserved confounding gives roughly **+17 percentage points** —
 exercise appears to *cause* heart disease, which is not credible and is a good
 illustration of what confounding does here. The two placebo-adjusted benchmarks
-give about **+1pp** (conventional DID, which here corresponds to `k = 0.85`) and
-**−1pp** (equiconfounding after rescaling). Both are far closer to the truth of
+give about **+1pp** (raw-scale equiconfounding, `m = 1`, which here corresponds
+to `k = 0.85`) and **−1pp** (equiconfounding after rescaling, `k = 1`). Both are far closer to the truth of
 about −10pp than assuming no unobserved confounding, though neither is a good
 approximation to it — which is the paper's point: these are still *point*
 assumptions.
@@ -144,6 +159,10 @@ plm_bounds(fit, k = c(0, 3), n_boot = 200)
 The truth is inside it. Note what this bought us: we did not have to defend a
 point assumption, only an interval, and the interval was wide enough to be
 defensible.
+
+`lower` and `upper` are the bounds themselves. The `*_boot_q` columns summarise
+sampling variability in those bounds; they are not a confidence interval for the
+identified set, and `?plm_bounds` spells out the distinction.
 
 ```{r line, fig.alt = "Adjusted estimate against k"}
 plm_line_plot(fit, k = c(0, 3), n_boot = 200)

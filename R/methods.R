@@ -28,6 +28,15 @@ print.placebo_lm <- function(x, ...) {
   cat("\nSensitivity parameter for this structure: ", x$spec$sens_param,
       "\n  (zero means a perfect placebo)\n", sep = "")
 
+  cat("\nEstimand:\n")
+  cat(paste0("  ", strwrap(x$estimand, width = 72)), sep = "\n")
+  cat("  This is a coefficient in a linear projection. It is an average causal\n")
+  cat("  effect only under further assumptions, such as no effect heterogeneity.\n")
+
+  cat("\nAssumptions implied by this structure:\n")
+  for (a in x$assumptions)
+    cat(paste0("  - ", strwrap(a, width = 70, exdent = 4)), sep = "\n")
+
   cat("\nBenchmarks:\n")
   bm <- plm_benchmarks(x)
   print(format(bm, digits = 5), row.names = FALSE)

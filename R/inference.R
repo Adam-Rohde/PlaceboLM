@@ -60,9 +60,16 @@
 #' @param ci_type `"percentile"` (default) or `"normal"`.
 #' @param cores Integer. Cores for the bootstrap.
 #'
+#' @section Sampling assumptions:
+#' The bootstrap resamples rows independently, and the asymptotic justification
+#' in the paper assumes i.i.d. sampling. Do not read these intervals as valid
+#' under clustered, panel, time-series, or spatially dependent sampling: they
+#' will generally be too narrow. For dependence that a variance estimator can
+#' handle, use [plm_analytic()] with a cluster-robust `vcov` on the `m` path.
+#'
 #' @return A data frame with one row per grid point and columns `k`, `m`,
-#'   `imperfection`, `estimate`, and -- when `n_boot > 0` -- `std_error`,
-#'   `ci_lower`, `ci_upper`.
+#'   `imperfection`, `adjusted_coefficient`, and -- when `n_boot > 0` --
+#'   `std_error`, `ci_lower`, `ci_upper`.
 #'
 #' @examples
 #' set.seed(1)
@@ -87,9 +94,9 @@ plm_grid <- function(fit, k = NULL, m = NULL, imperfection = 0,
   grid <- expand.grid(k = k_vals, imperfection = imperfection,
                       KEEP.OUT.ATTRS = FALSE)
   grid$m <- grid$k * fit$SF
-  grid$estimate <- plm_estimate(fit, k = grid$k,
-                                imperfection = grid$imperfection)
-  grid <- grid[, c("k", "m", "imperfection", "estimate")]
+  grid$adjusted_coefficient <- plm_estimate(fit, k = grid$k,
+                                            imperfection = grid$imperfection)
+  grid <- grid[, c("k", "m", "imperfection", "adjusted_coefficient")]
 
   if (n_boot > 0) {
     reps <- .plm_boot_replicates(fit, n_boot = n_boot, cores = cores)
@@ -112,8 +119,8 @@ plm_grid <- function(fit, k = NULL, m = NULL, imperfection = 0,
       grid$ci_upper <- qs[2, ]
     } else {
       z <- stats::qnorm(1 - alpha / 2)
-      grid$ci_lower <- grid$estimate - z * grid$std_error
-      grid$ci_upper <- grid$estimate + z * grid$std_error
+      grid$ci_lower <- grid$adjusted_coefficient - z * grid$std_error
+      grid$ci_upper <- grid$adjusted_coefficient + z * grid$std_error
     }
   }
 

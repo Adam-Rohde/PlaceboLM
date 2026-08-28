@@ -69,9 +69,13 @@ test_that("print and summary do not dump the dataset", {
   fit <- placebo_lm(d, "Y", "D", "P", covariates = "X",
                     structure = "placebo_outcome")
   out <- utils::capture.output(print(fit))
-  expect_lt(length(out), 40L)
+  # The point is that printing summarises rather than dumping 1000 rows of data.
+  expect_lt(length(out), 60L)
+  expect_lt(length(out), nrow(d) / 10)
   expect_true(any(grepl("Placebo Outcome", out)))
   expect_true(any(grepl("scale factor", out)))
+  expect_true(any(grepl("Estimand", out)))
+  expect_true(any(grepl("Assumptions implied", out)))
 
   s <- utils::capture.output(print(summary(fit)))
   expect_true(any(grepl("Tipping point", s)))

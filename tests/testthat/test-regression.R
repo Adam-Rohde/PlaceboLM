@@ -28,10 +28,10 @@ test_that("plm_analytic() agrees with plm_estimate() on the point estimate", {
   fit <- placebo_lm(d, "Y", "D", "P", covariates = "X",
                     structure = "placebo_outcome")
   a <- plm_analytic(fit, m = 1, imperfection = 0.1)
-  expect_equal(a$estimate, plm_estimate(fit, m = 1, imperfection = 0.1))
+  expect_equal(a$adjusted_coefficient, plm_estimate(fit, m = 1, imperfection = 0.1))
   expect_gt(a$std_error, 0)
-  expect_lt(a$ci_lower, a$estimate)
-  expect_gt(a$ci_upper, a$estimate)
+  expect_lt(a$ci_lower, a$adjusted_coefficient)
+  expect_gt(a$ci_upper, a$adjusted_coefficient)
 })
 
 test_that("at m = 0 the analytic SE equals the plain short-regression SE", {
@@ -43,7 +43,7 @@ test_that("at m = 0 the analytic SE equals the plain short-regression SE", {
   a <- plm_analytic(fit, m = 0)
   ct <- stats::coef(summary(stats::lm(Y ~ D + X, data = d)))
   expect_equal(a$std_error, unname(ct["D", "Std. Error"]))
-  expect_equal(a$estimate,  unname(ct["D", "Estimate"]))
+  expect_equal(a$adjusted_coefficient,  unname(ct["D", "Estimate"]))
 })
 
 test_that("analytic and bootstrap standard errors are close at fixed m", {
@@ -54,7 +54,7 @@ test_that("analytic and bootstrap standard errors are close at fixed m", {
   a <- plm_analytic(fit, m = m)
   set.seed(1)
   b <- plm_grid(fit, k = m / fit$SF, n_boot = 400, cores = 1)
-  expect_equal(a$estimate, b$estimate)
+  expect_equal(a$adjusted_coefficient, b$adjusted_coefficient)
   expect_equal(a$std_error, b$std_error, tolerance = 0.15)
 })
 
@@ -67,7 +67,7 @@ test_that("a custom vcov is honoured", {
   a <- plm_analytic(fit, m = 1)
   r <- plm_analytic(fit, m = 1, vcov = infl)
   expect_equal(r$std_error, a$std_error * 2)
-  expect_equal(r$estimate, a$estimate)
+  expect_equal(r$adjusted_coefficient, a$adjusted_coefficient)
 })
 
 test_that("the representation is refused where it does not hold", {

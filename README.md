@@ -15,10 +15,24 @@ confounding as the relationship of interest). Both are often indefensible.
 
 This package replaces them with *ranges*. You postulate an interval for how
 imperfect the placebo might be, and an interval for how the confounding
-compares, and get back the range of effect estimates consistent with those
-assumptions. Conventional difference-in-differences falls out as the single
-point assumption `m = 1`, so the framework is a reasoned relaxation of parallel
-trends.
+compares, and get back the range of estimates consistent with those
+assumptions.
+
+When the placebo is a pre-treatment measure of the outcome, conventional
+difference-in-differences is the single point assumption `m = 1`, so the
+framework is a reasoned relaxation of parallel trends. In other placebo
+settings `m = 1` is still equiconfounding on the raw scale, but it has no
+difference-in-differences reading.
+
+## What is being estimated
+
+What the method partially identifies is the coefficient on the treatment in the
+*long regression* — the one that would include the unobserved confounders if you
+could observe them. That is a linear projection, not automatically an average
+treatment effect: the two coincide only under further assumptions, such as no
+effect heterogeneity. The package therefore names its output
+`adjusted_coefficient` rather than `estimate`, and `fit$estimand` states the
+target in words.
 
 ## Installation
 
@@ -47,19 +61,28 @@ fit <- placebo_lm(
 
 ```r
 plm_benchmarks(fit)
-#>                   benchmark     k   m  imperfection  estimate
-#> 1 No unobserved confounding  0.00  0.00           0     -5928
-#> 2               DID (m = 1)  0.857 1.00           0      2087
-#> 3   Equiconfounding (k = 1)  1.00  1.167          0      3428
+#>                            benchmark     k      m  imperfection  adjusted_coefficient
+#> 1          No unobserved confounding  0.00  0.000            0                 -5928
+#> 2                        DID (m = 1)  0.857 1.000            0                  2087
+#> 3  Equiconfounding, rescaled (k = 1)  1.00  1.167            0                  3428
 ```
+
+The middle row is labelled `DID (m = 1)` only for the `placebo_outcome`
+structure, where the difference-in-differences reading exists. Elsewhere it
+reads `Equiconfounding, raw scale (m = 1)`.
 
 **Bounds** over a range of assumptions — the method's headline output:
 
 ```r
 plm_bounds(fit, k = c(0.5, 1), n_boot = 1000)
-#>   k_low k_high  lower  upper  ci_lower  ci_upper
-#>     0.5      1  -1249   3428     ...        ...
+#>   k_low k_high  lower  upper  lower_boot_q  upper_boot_q
+#>     0.5      1  -1249   3428          ...           ...
 ```
+
+`lower`/`upper` are the point bounds. `lower_boot_q`/`upper_boot_q` summarise
+bootstrap variability *in those bounds* — they are deliberately not called a
+confidence interval, because they carry no coverage guarantee for the
+identified set. See `?plm_bounds`.
 
 **Tipping points**, and backing out relative confounding from a benchmark:
 
@@ -100,6 +123,11 @@ plm_analytic(fit, m = 1,
 
 Reasoning with `k` instead makes the scale factor an estimated quantity; the
 paper recommends the bootstrap there, which is what `plm_grid()` does.
+
+Note the bootstrap resamples rows independently and the theory assumes i.i.d.
+sampling. Under clustered, panel, or spatially dependent sampling those
+intervals will generally be too narrow; use the cluster-robust `vcov` route
+above on the `m` path instead.
 
 ## Supported causal structures
 

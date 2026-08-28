@@ -34,14 +34,23 @@ estimates only.}
 }
 \value{
 A data frame with one row per grid point and columns \code{k}, \code{m},
-\code{imperfection}, \code{estimate}, and -- when \code{n_boot > 0} -- \code{std_error},
-\code{ci_lower}, \code{ci_upper}.
+\code{imperfection}, \code{adjusted_coefficient}, and -- when \code{n_boot > 0} --
+\code{std_error}, \code{ci_lower}, \code{ci_upper}.
 }
 \description{
 Evaluates the adjusted estimate with a bootstrap confidence interval at every
 requested combination of the relative-confounding parameter and the placebo
 imperfection. Resampling is performed once and reused across the whole grid.
 }
+\section{Sampling assumptions}{
+
+The bootstrap resamples rows independently, and the asymptotic justification
+in the paper assumes i.i.d. sampling. Do not read these intervals as valid
+under clustered, panel, time-series, or spatially dependent sampling: they
+will generally be too narrow. For dependence that a variance estimator can
+handle, use \code{\link[=plm_analytic]{plm_analytic()}} with a cluster-robust \code{vcov} on the \code{m} path.
+}
+
 \examples{
 set.seed(1)
 n <- 300

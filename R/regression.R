@@ -132,7 +132,7 @@ plm_regression <- function(fit, m = NULL, k = NULL, imperfection = 0) {
 #'   `sandwich::vcovCL`. Defaults to [stats::vcov()].
 #'
 #' @return A one-row data frame with columns `m`, `k`, `imperfection`,
-#'   `estimate`, `std_error`, `ci_lower`, and `ci_upper`.
+#'   `adjusted_coefficient`, `std_error`, `ci_lower`, and `ci_upper`.
 #'
 #' @examples
 #' set.seed(1)
@@ -160,7 +160,7 @@ plm_analytic <- function(fit, m = NULL, k = NULL, imperfection = 0,
 
   data.frame(
     m = m_val, k = m_val / fit$SF, imperfection = imperfection,
-    estimate = est, std_error = se,
+    adjusted_coefficient = est, std_error = se,
     ci_lower = est - tq * se, ci_upper = est + tq * se,
     row.names = NULL
   )

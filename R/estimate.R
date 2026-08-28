@@ -99,19 +99,25 @@ plm_benchmarks <- function(fit, imperfection = 0) {
   .plm_check_fit(fit)
   imperfection <- .plm_check_imperfection(fit, imperfection)
 
-  k_vals <- c(
-    "No unobserved confounding" = 0,
-    "DID (m = 1)"               = 1 / fit$SF,
-    "Equiconfounding (k = 1)"   = 1
-  )
+  # m = 1 is equiconfounding on the raw scale. It additionally has a
+  # difference-in-differences reading only where the placebo is a pre-treatment
+  # measure of the outcome, which is the `did_equivalent` flag in the registry.
+  # Labelling every structure "DID" would assert a reading that does not exist
+  # for, say, a placebo treatment or a post-outcome placebo.
+  m1_label <- if (isTRUE(fit$spec$did_equivalent))
+    "DID (m = 1)" else "Equiconfounding, raw scale (m = 1)"
+
+  k_vals <- c(0, 1 / fit$SF, 1)
+  names(k_vals) <- c("No unobserved confounding", m1_label,
+                     "Equiconfounding, rescaled (k = 1)")
 
   data.frame(
     benchmark    = names(k_vals),
     k            = unname(k_vals),
     m            = unname(k_vals) * fit$SF,
     imperfection = imperfection,
-    estimate     = plm_estimate(fit, k = unname(k_vals),
-                                imperfection = imperfection),
+    adjusted_coefficient = plm_estimate(fit, k = unname(k_vals),
+                                        imperfection = imperfection),
     row.names    = NULL,
     stringsAsFactors = FALSE
   )
@@ -153,9 +159,27 @@ plm_benchmarks <- function(fit, imperfection = 0) {
 #' @param cores Integer. Cores for the bootstrap. Defaults to one less than
 #'   detected, minimum 1.
 #'
+#' @section What the bootstrap columns are, and are not:
+#' Four distinct objects are easy to confuse here.
+#' \enumerate{
+#'   \item A confidence interval for the estimate at one fixed choice of the
+#'     sensitivity parameters -- that is [plm_grid()] or [plm_analytic()].
+#'   \item The point bounds: the range of estimates over the assumption region,
+#'     holding the data fixed. These are `lower` and `upper`.
+#'   \item Bootstrap uncertainty about each bound separately. These are
+#'     `lower_boot_q` and `upper_boot_q`: the lower quantile of the bootstrapped
+#'     lower bounds, and the upper quantile of the bootstrapped upper bounds.
+#'   \item A confidence region with a coverage guarantee for the whole
+#'     identified set, in the sense of Imbens and Manski (2004).
+#' }
+#' This package provides the first three. It does **not** provide the fourth,
+#' and `lower_boot_q`/`upper_boot_q` should not be reported as though it did.
+#' They are a descriptive summary of sampling variability in the bounds, not a
+#' procedure with an established coverage property.
+#'
 #' @return A one-row data frame with columns `k_low`, `k_high`, `m_low`,
 #'   `m_high`, `imperfection_low`, `imperfection_high`, `lower`, `upper`, and
-#'   -- when `n_boot > 0` -- `ci_lower` and `ci_upper`.
+#'   -- when `n_boot > 0` -- `lower_boot_q` and `upper_boot_q`.
 #'
 #' @examples
 #' set.seed(1)
@@ -217,12 +241,12 @@ plm_bounds <- function(fit, k = NULL, m = NULL, imperfection = 0,
     highs <- highs[is.finite(highs)]
 
     if (ci_type == "percentile") {
-      out$ci_lower <- unname(stats::quantile(lows,  probs = alpha / 2))
-      out$ci_upper <- unname(stats::quantile(highs, probs = 1 - alpha / 2))
+      out$lower_boot_q <- unname(stats::quantile(lows,  probs = alpha / 2))
+      out$upper_boot_q <- unname(stats::quantile(highs, probs = 1 - alpha / 2))
     } else {
       z <- stats::qnorm(1 - alpha / 2)
-      out$ci_lower <- point[1] - z * stats::sd(lows)
-      out$ci_upper <- point[2] + z * stats::sd(highs)
+      out$lower_boot_q <- point[1] - z * stats::sd(lows)
+      out$upper_boot_q <- point[2] + z * stats::sd(highs)
     }
   }
 

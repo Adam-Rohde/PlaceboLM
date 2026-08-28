@@ -45,6 +45,8 @@ An object of class \code{"placebo_lm"}: a list with components
 \item{\code{regressions}}{the fitted \code{lm} objects}
 \item{\code{coefs}}{list with \code{target} and \code{sens}, each
 \code{list(estimate=, se=, df=)}}
+\item{\code{estimand}}{what is being partially identified, in words}
+\item{\code{assumptions}}{the substantive claims implied by the structure}
 \item{\code{SF}}{the scale factor}
 }
 }

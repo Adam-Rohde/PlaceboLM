@@ -63,9 +63,9 @@ plm_line_plot <- function(fit, k = NULL, m = NULL, imperfection = 0,
   xlab  <- if (on_m) "m (raw ratio of biases)" else "k (relative confounding)"
   has_ci <- "ci_lower" %in% names(dat)
 
-  ylim <- if (has_ci) range(dat$ci_lower, dat$ci_upper) else range(dat$estimate)
+  ylim <- if (has_ci) range(dat$ci_lower, dat$ci_upper) else range(dat$adjusted_coefficient)
   bm <- if (benchmarks) plm_benchmarks(fit) else NULL
-  if (!is.null(bm)) ylim <- range(ylim, bm$estimate)
+  if (!is.null(bm)) ylim <- range(ylim, bm$adjusted_coefficient)
 
   imps <- unique(dat$imperfection)
   for (im in imps) {
@@ -75,7 +75,7 @@ plm_line_plot <- function(fit, k = NULL, m = NULL, imperfection = 0,
     main <- if (length(imps) > 1L)
       paste0(fit$spec$sens_param, " = ", signif(im, 4)) else NULL
 
-    graphics::plot(d[[xcol]], d$estimate, type = "n",
+    graphics::plot(d[[xcol]], d$adjusted_coefficient, type = "n",
                    xlab = xlab, ylab = "Adjusted estimate",
                    main = main, ylim = ylim, ...)
 
@@ -88,18 +88,18 @@ plm_line_plot <- function(fit, k = NULL, m = NULL, imperfection = 0,
     }
     graphics::abline(h = 0, col = "red",  lwd = 2)
     graphics::abline(v = 0, col = "gray", lwd = 1)
-    graphics::lines(d[[xcol]], d$estimate, lwd = 2)
+    graphics::lines(d[[xcol]], d$adjusted_coefficient, lwd = 2)
 
     # Benchmarks are drawn only on the perfect-placebo panel, where they are
     # defined; on other panels they would be misleading.
     if (!is.null(bm) && isTRUE(all.equal(im, 0))) {
       bx <- if (on_m) bm$m else bm$k
-      graphics::points(bx, bm$estimate,
+      graphics::points(bx, bm$adjusted_coefficient,
                        col = c("navy", "darkgreen", "blue"),
                        pch = c(18, 15, 17), cex = 1.6)
       graphics::legend(
         "topright", bty = "o", bg = "white",
-        legend = paste0(bm$benchmark, " = ", signif(bm$estimate, 4)),
+        legend = paste0(bm$benchmark, " = ", signif(bm$adjusted_coefficient, 4)),
         col = c("navy", "darkgreen", "blue"),
         pch = c(18, 15, 17)
       )
@@ -181,7 +181,7 @@ plm_contour_plot <- function(fit, k = NULL, m = NULL, imperfection = NULL,
                      pch = c(18, 15, 17), cex = 1.6)
     graphics::legend(
       "topright", bty = "o", bg = "white",
-      legend = paste0(bm$benchmark, " = ", signif(bm$estimate, 4)),
+      legend = paste0(bm$benchmark, " = ", signif(bm$adjusted_coefficient, 4)),
       col = c("navy", "darkgreen", "blue"), pch = c(18, 15, 17)
     )
   }

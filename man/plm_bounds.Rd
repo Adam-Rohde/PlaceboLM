@@ -43,7 +43,7 @@ detected, minimum 1.}
 \value{
 A one-row data frame with columns \code{k_low}, \code{k_high}, \code{m_low},
 \code{m_high}, \code{imperfection_low}, \code{imperfection_high}, \code{lower}, \code{upper}, and
--- when \code{n_boot > 0} -- \code{ci_lower} and \code{ci_upper}.
+-- when \code{n_boot > 0} -- \code{lower_boot_q} and \code{upper_boot_q}.
 }
 \description{
 The headline output of the method. Given a \emph{range} of relative confounding
@@ -61,6 +61,26 @@ reported interval widens to reflect sampling uncertainty \emph{in the bound
 itself}: \code{ci_lower} is the lower quantile of the bootstrapped lower bounds
 and \code{ci_upper} the upper quantile of the bootstrapped upper bounds.
 }
+\section{What the bootstrap columns are, and are not}{
+
+Four distinct objects are easy to confuse here.
+\enumerate{
+\item A confidence interval for the estimate at one fixed choice of the
+sensitivity parameters -- that is \code{\link[=plm_grid]{plm_grid()}} or \code{\link[=plm_analytic]{plm_analytic()}}.
+\item The point bounds: the range of estimates over the assumption region,
+holding the data fixed. These are \code{lower} and \code{upper}.
+\item Bootstrap uncertainty about each bound separately. These are
+\code{lower_boot_q} and \code{upper_boot_q}: the lower quantile of the bootstrapped
+lower bounds, and the upper quantile of the bootstrapped upper bounds.
+\item A confidence region with a coverage guarantee for the whole
+identified set, in the sense of Imbens and Manski (2004).
+}
+This package provides the first three. It does \strong{not} provide the fourth,
+and \code{lower_boot_q}/\code{upper_boot_q} should not be reported as though it did.
+They are a descriptive summary of sampling variability in the bounds, not a
+procedure with an established coverage property.
+}
+
 \examples{
 set.seed(1)
 n <- 400

@@ -28,7 +28,7 @@ variance-covariance matrix, e.g. \code{sandwich::vcovHC} or a call to
 }
 \value{
 A one-row data frame with columns \code{m}, \code{k}, \code{imperfection},
-\code{estimate}, \code{std_error}, \code{ci_lower}, and \code{ci_upper}.
+\code{adjusted_coefficient}, \code{std_error}, \code{ci_lower}, and \code{ci_upper}.
 }
 \description{
 Exact analytic inference for the \code{m} parameterization, via the regression
