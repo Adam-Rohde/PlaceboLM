@@ -78,11 +78,11 @@
 #'   `test-engine.R`.
 #'
 #' @section Sampling assumptions:
-#' The bootstrap resamples rows independently, and the asymptotic justification
-#' in the paper assumes i.i.d. sampling. Do not read these intervals as valid
-#' under clustered, panel, time-series, or spatially dependent sampling: they
-#' will generally be too narrow. For dependence that a variance estimator can
-#' handle, use [plm_analytic()] with a cluster-robust `vcov` on the `m` path.
+#' The bootstrap resamples rows independently, and the supporting asymptotic
+#' theory assumes i.i.d. sampling. If your design has clustered, panel,
+#' time-series or spatially dependent sampling, choose an inference method
+#' suited to it: [plm_analytic()] accepts any `vcov` estimator, including
+#' cluster-robust ones, on the `m` path.
 #'
 #' @return A data frame with one row per grid point and columns `k`, `m`,
 #'   `imperfection`, `adjusted_coefficient`, and -- when `n_boot > 0` --

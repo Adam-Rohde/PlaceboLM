@@ -203,19 +203,15 @@ test_that("a placebo with little residual variation gives wide, not falsely tigh
 })
 
 
-# --- Dependence -------------------------------------------------------------
+# --- Dependent sampling ------------------------------------------------------
 #
-# The theory assumes i.i.d. sampling, and the natural expectation is that
-# clustered data makes the bootstrap under-cover. That turns out to be true only
-# sometimes, and the condition is worth knowing: by the Moulton argument a
-# coefficient's variance is inflated only when the regressor AND the residual
-# are both cluster correlated. The placebo adjustment removes the confounder --
-# so if the cluster dependence lives entirely in that confounder, the adjustment
-# removes the dependence too.
+# Regression guards on how the interval behaves when rows are not independent.
+# The two generators place the cluster structure differently; the expectations
+# below record current behaviour so that a change to the resampling scheme
+# shows up here.
 
-test_that("clustering in the confounder is absorbed by the adjustment", {
-  # All cluster structure sits in Z. The naive estimate is affected; the
-  # adjusted one is not, so the i.i.d. bootstrap remains roughly calibrated.
+test_that("clustered sampling, cluster structure in the confounder", {
+  # Cluster structure confined to the confounder.
   skip_unless_slow()
   pop <- plm_population_clustered(shock = "confounder")
   S <- 250
@@ -230,17 +226,13 @@ test_that("clustering in the confounder is absorbed by the adjustment", {
     isTRUE(g$ci_lower <= pop$target_long && pop$target_long <= g$ci_upper)
   }, logical(1))
 
-  # Not a failure of the bootstrap: there is no residual dependence left for it
-  # to miss. Coverage should be near nominal.
   expect_near_nominal(mean(hits), S, mult = 4)
 })
 
 
-test_that("dependence that survives the adjustment does make the i.i.d. bootstrap under-cover", {
-  # Z still has a cluster component, so the treatment is cluster correlated, but
-  # Y carries a separate cluster shock that the placebo does not share and the
-  # adjustment cannot remove. Both Moulton conditions hold and the i.i.d.
-  # interval is too narrow.
+test_that("clustered sampling, cluster shock also in the outcome", {
+  # Z has a cluster component and Y carries a further cluster shock that P does
+  # not share.
   skip_unless_slow()
   pop <- plm_population_clustered(shock = "outcome")
   S <- 250

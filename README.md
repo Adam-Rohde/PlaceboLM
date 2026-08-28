@@ -138,6 +138,32 @@ sampling. Under clustered, panel, or spatially dependent sampling those
 intervals will generally be too narrow; use the cluster-robust `vcov` route
 above on the `m` path instead.
 
+## Combining several placebos
+
+Different placebos give different bounds on the same effect. Intersecting them
+is tighter than any one alone, while resting only on assumptions defended for
+each separately:
+
+```r
+plm_triangulate(list(re74 = fit74, re75 = fit75, e75 = fit_e75),
+                k = c(0.5, 1))
+#>          placebo  k_low k_high   lower   upper
+#>  re74               0.5      1   -1406    3115
+#>  re75               0.5      1   -1249    3428
+#>  ...
+#>  (intersection)      NA     NA   -1249    3115
+```
+
+Ranges can also be given per placebo, since the defensible range often differs.
+Use `k` rather than `m` here — `m` is not comparable across placebos on
+different scales.
+
+To compare structural readings of a single placebo instead:
+
+```r
+plm_compare_structures(dat, "Y", "D", "P")
+```
+
 ## Supported causal structures
 
 You can name a structure directly, or — usually easier — state your causal

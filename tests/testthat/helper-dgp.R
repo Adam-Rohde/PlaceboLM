@@ -206,25 +206,13 @@ plm_population <- function(structure, n = 400000, seed = 987, check = TRUE,
 }
 
 
-# Clustered variants of the placebo-outcome DGP.
+# Clustered variants of the placebo-outcome DGP, used to exercise the inference
+# code under dependent sampling.
 #
-# Whether clustering threatens inference here turns out to depend on WHERE the
-# dependence lives, because of the Moulton condition: a coefficient's variance
-# is inflated only when the regressor AND the residual are both cluster
-# correlated. Two cases are therefore generated.
-#
-#   shock = "confounder"
-#     All cluster structure sits in the unobserved confounder Z. The treatment
-#     inherits it, so the regressor is cluster correlated -- but the placebo
-#     adjustment exists precisely to remove Z, and it removes the dependence
-#     along with it. Measured on one draw, the ratio of clustered to classical
-#     standard errors falls from 1.66 before adjustment to 0.76 after.
-#
-#   shock = "outcome"
-#     Z still has a cluster component, so the treatment is cluster correlated,
-#     but Y also carries a separate cluster shock that P does not share. That
-#     shock survives the adjustment, both Moulton conditions hold, and the
-#     ratio stays high: 2.39 before adjustment, 1.84 after.
+#   shock = "confounder"  all cluster structure sits in the unobserved
+#                         confounder Z, which the treatment inherits.
+#   shock = "outcome"     Z still has a cluster component, and Y additionally
+#                         carries a cluster shock that P does not share.
 #
 # In both cases the cluster shock is independent of D given Z, so the population
 # target remains the DGP effect.
