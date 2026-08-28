@@ -34,10 +34,20 @@
     warned <- .plm_deprecate_env$warned
     if (!old %in% warned) {
       .plm_deprecate_env$warned <- c(warned, old)
-      warning(old, "() is deprecated and is retained only to reproduce the ",
+      # A message, deliberately, not a warning. R's convention for deprecation
+      # is warning(), but that convention assumes no published, citable code
+      # depends on the call succeeding. Here it does: the paper prints this
+      # interface and tells readers to install the package. Under
+      # options(warn = 2) -- common in CI and among strict users -- a warning is
+      # promoted to an error, and the code printed in the paper would fail on
+      # its first call with something that looks like a broken package.
+      #
+      # A message is still shown by default and still says the interface is
+      # deprecated, but no `warn` setting can turn it into an error. The notice
+      # is informational; it is not a signal that the results are wrong.
+      message(old, "() is deprecated and is retained only to reproduce the ",
               "code published in\nthe paper's appendix. Use ", new,
-              "() for new work; see vignette(\"getting-started\").",
-              call. = FALSE)
+              "() for new work; see vignette(\"getting-started\").")
     }
     invisible(NULL)
   }

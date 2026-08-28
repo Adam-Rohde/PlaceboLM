@@ -58,17 +58,41 @@ test_that("legacy and current interfaces agree numerically", {
   }
 })
 
-test_that("legacy entry points warn that they are deprecated", {
+test_that("legacy entry points announce that they are deprecated", {
   d <- plm_test_data(n = 200)
   legacy_dat2 <<- d
   on.exit(rm(legacy_dat2, envir = globalenv()), add = TRUE)
   PlaceboLM:::.plm_deprecate_reset()
-  expect_warning(
-    suppressMessages(placeboLM(data = "legacy_dat2", outcome = "Y",
-                               treatment = "D", placebo_outcome = "P")),
+  expect_message(
+    placeboLM(data = "legacy_dat2", outcome = "Y",
+              treatment = "D", placebo_outcome = "P"),
     "deprecated"
   )
 })
+
+test_that("the paper's published code survives options(warn = 2)", {
+  # The reason the deprecation notice is a message rather than a warning. Under
+  # warn = 2 a warning becomes an error, and the code printed in the paper's
+  # appendix would fail on its first call.
+  d <- plm_test_data(n = 200)
+  legacy_warn2 <<- d
+  on.exit({ rm(legacy_warn2, envir = globalenv()); options(warn = 0) }, add = TRUE)
+
+  # Note the legacy code prints via message(cat(...)); cat() writes straight to
+  # stdout, so expect_silent() is not the right assertion. What matters is that
+  # nothing is promoted to an error.
+  PlaceboLM:::.plm_deprecate_reset()
+  options(warn = 2)
+  out <- NULL
+  expect_error(
+    invisible(utils::capture.output(suppressMessages(
+      out <- placeboLM(data = "legacy_warn2", outcome = "Y", treatment = "D",
+                       placebo_outcome = "P")))),
+    NA)
+  expect_equal(out$type,
+               "Single Placebo, No Direct Relationships, Placebo Outcome")
+})
+
 
 test_that("double placebos are refused by the legacy interface too", {
   d <- plm_test_data(n = 200)

@@ -1,5 +1,22 @@
 # PlaceboLM (development)
 
+## Deprecation notice is a message, not a warning
+
+`.plm_deprecate()` now uses `message()`. R's convention for deprecation is
+`warning()`, but that convention assumes no published, citable code depends on
+the call succeeding. Here it does: the paper prints the pre-0.2.0 interface and
+directs readers to install this package.
+
+Under `options(warn = 2)` -- common in CI and among users who run strictly --
+a warning is promoted to an error, and the code printed in the paper's appendix
+failed on its first call with something that looked like a broken package. A
+message is still shown by default and still says the interface is deprecated,
+but no `warn` setting can turn it into an error. The notice is informational; it
+is not a signal that results are wrong.
+
+`test-legacy-api.R` now runs the paper's code under `options(warn = 2)` and
+requires it to complete.
+
 ## Vignettes
 
 Everything shipped now runs. The applications vignette (NSW and Zika) has been
